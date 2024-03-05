@@ -12,11 +12,32 @@ public class EFetchResult
 public class PubmedArticle
 {
     public MedlineCitation MedlineCitation { get; set; } = new();
+    public PubmedData PubmedData { get; set; } = new();
 }
 
 public class MedlineCitation
 {
     public EFetchArticle Article { get; set; } = new();
+}
+
+public class PubmedData
+{
+    public PubMedHistory History { get; set; } = new();
+}
+
+public class PubMedHistory
+{
+    public List<PubMedPubDate> PubMedPubDates { get; set; } = new();
+}
+
+public class PubMedPubDate
+{
+    [XmlAttribute(AttributeName = "PubStatus")]
+    public string PubStatus { get; set; } = string.Empty;
+
+    public string Year { get; set; } = string.Empty;
+    public string Month { get; set; } = string.Empty;
+    public string Day { get; set; } = string.Empty;
 }
 
 public class EFetchArticle

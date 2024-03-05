@@ -30,14 +30,24 @@ builder.Services.AddSingleton<IPubMedClient, PubMedClient>();
 var serviceProvider = builder.Services.BuildServiceProvider();
 var pubMedClient = serviceProvider.GetRequiredService<IPubMedClient>();
 
-var articleFilter = new ArticleFilter
+var vetSurgMeshTerms = new List<string> { "veterinary", "surgery" };
+
+var threeYearArticles = new ArticleFilter
 {
-    EndYear = 2019,
-    StartYear = 2019,
-    MeshTerm = new List<string> { "veterinary", "surgery" },
+    EndYear = 2024,
+    StartYear = 2021,
+    MeshTerm = vetSurgMeshTerms,
     Journal = new List<string> { "Vet Surg" }
 };
 
-var articles = await pubMedClient.FindArticles(articleFilter);
+var fiveYearArticles = new ArticleFilter
+{
+    EndYear = 2024,
+    StartYear = 2019,
+    MeshTerm = vetSurgMeshTerms,
+    Journal = new List<string> { "J Vet Intern Med" }
+};
+
+var articles = await pubMedClient.FindArticles(new List<ArticleFilter> { threeYearArticles, fiveYearArticles });
 
 await pubMedClient.GenerateContent(articles);

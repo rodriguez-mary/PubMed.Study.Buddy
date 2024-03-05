@@ -22,7 +22,7 @@ public class LocalIoService : IOutputService
     {
         var csv = new StringBuilder();
 
-        csv.AppendLine("id,impact score,title,first author,secondary author(s),publication date,journal,cited count,abstract,PubMed link");
+        csv.AppendLine("id,impact score,title,first author,publication date,journal,cited count,abstract,PubMed link");
         foreach (var article in articles)
         {
             csv.AppendLine(
@@ -30,7 +30,6 @@ public class LocalIoService : IOutputService
                 $"{article.ImpactScore}," +
                 $"\"{article.Title}\"," +
                 $"\"{GetFirstAuthorLastFirstName(article)}\"," +
-                $"," + //todo
                 $"{article.PublicationDate.ToString("yyyy-MM-dd")}," +
                 $"\"{article.Publication?.JournalName ?? string.Empty}\"," +
                 $"{(article.CitedBy == null ? "0" : article.CitedBy.Count)}," +

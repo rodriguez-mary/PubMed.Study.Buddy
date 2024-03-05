@@ -1,6 +1,7 @@
 ﻿using PubMed.Study.Buddy.Domains.Search.EUtils.Models;
 using PubMed.Study.Buddy.DTOs;
 using System.Globalization;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 using Author = PubMed.Study.Buddy.DTOs.Author;
 
 namespace PubMed.Study.Buddy.Domains.Search.EUtils;
@@ -20,7 +21,8 @@ internal static class Utilities
 
         // Date parameters
         if (filter.StartYear != null)
-            queryParams.Add($"{EUtilsConstants.StartDateParameter}={filter.StartYear}[{EUtilsConstants.PublishDateType}]");
+            queryParams.Add(
+                $"{EUtilsConstants.StartDateParameter}={filter.StartYear}[{EUtilsConstants.PublishDateType}]");
         if (filter.EndYear != null)
             queryParams.Add($"{EUtilsConstants.EndDateParameter}={filter.EndYear}[{EUtilsConstants.PublishDateType}]");
 
@@ -55,26 +57,24 @@ internal static class Utilities
 
         if (fetchResponse.PubmedArticles.Count <= 0) return article;
 
-        var pubMedArticle = fetchResponse.PubmedArticles.First().MedlineCitation.Article;  //there should only be one
-        article.Title = pubMedArticle.ArticleTitle;
+        var pubMedArticle = fetchResponse.PubmedArticles.First(); //there should only be one
 
-        if (pubMedArticle.ArticleDate != null)
-        {
-            var date = pubMedArticle.ArticleDate;
-            if (DateTime.TryParse($"{date.Year}-{date.Month}-{date.Day}", out var pubDate))
-                article.PublicationDate = pubDate;
-        }
+        var medlineArticle = pubMedArticle.MedlineCitation.Article;
+        article.Title = medlineArticle.ArticleTitle;
 
-        if (pubMedArticle.AuthorList is { Authors.Count: > 0 })
+        var publishedDate = GetPublishedDateFromArticleDate(pubMedArticle) ?? GetPublishedDateFromPubmedHistory(pubMedArticle);
+        if (publishedDate.HasValue) article.PublicationDate = publishedDate.Value;
+
+        if (medlineArticle.AuthorList is { Authors.Count: > 0 })
         {
             article.AuthorList = new List<Author>();
-            for (var i = 0; i < pubMedArticle.AuthorList.Authors.Count; i++)
+            for (var i = 0; i < medlineArticle.AuthorList.Authors.Count; i++)
             {
-                var author = pubMedArticle.AuthorList.Authors[i];
+                var author = medlineArticle.AuthorList.Authors[i];
 
                 article.AuthorList.Add(new Author
                 {
-                    First = (i == 0),  //we should get back the "first" author first from the pubmed xml
+                    First = (i == 0), //we should get back the "first" author first from the pubmed xml
                     FirstName = author.ForeName,
                     LastName = author.LastName,
                     Initials = author.Initials
@@ -82,18 +82,18 @@ internal static class Utilities
             }
         }
 
-        if (pubMedArticle.Journal != null)
+        if (medlineArticle.Journal != null)
         {
             article.Publication = new Publication
             {
-                JournalName = pubMedArticle.Journal.Title
+                JournalName = medlineArticle.Journal.Title
             };
 
-            if (pubMedArticle.Journal.JournalIssue != null)
+            if (medlineArticle.Journal.JournalIssue != null)
             {
-                article.Publication.Volume = pubMedArticle.Journal.JournalIssue.Volume;
+                article.Publication.Volume = medlineArticle.Journal.JournalIssue.Volume;
 
-                var date = pubMedArticle.Journal.JournalIssue.PubDate;
+                var date = medlineArticle.Journal.JournalIssue.PubDate;
                 if (date != null &&
                     DateTime.TryParseExact($"01/{date.Month}/{date.Year}", new[] { "DD/MM/YYYY", "DD/MM/YY" },
                         new CultureInfo("en-US"), DateTimeStyles.None, out var pubDate))
@@ -101,10 +101,10 @@ internal static class Utilities
             }
         }
 
-        if (pubMedArticle.MeshHeadingList is { MeshHeadings.Count: > 0 })
+        if (medlineArticle.MeshHeadingList is { MeshHeadings.Count: > 0 })
         {
             article.MeshMainHeadings = new List<string>();
-            foreach (var meshHeading in pubMedArticle.MeshHeadingList.MeshHeadings)
+            foreach (var meshHeading in medlineArticle.MeshHeadingList.MeshHeadings)
             {
                 if (meshHeading.DescriptorName != null)
                     article.MeshMainHeadings.Add(meshHeading.DescriptorName.Name);
@@ -123,5 +123,34 @@ internal static class Utilities
         //todo get abstract
 
         return article;
+    }
+
+    private static DateTime? GetPublishedDateFromArticleDate(PubmedArticle pubmedArticle)
+    {
+        var date = pubmedArticle.MedlineCitation.Article.ArticleDate;
+        if (date == null) return null;
+
+        if (DateTime.TryParse($"{date.Year}-{date.Month}-{date.Day}", out var pubDate))
+            return pubDate;
+
+        return null;
+    }
+
+    private static DateTime? GetPublishedDateFromPubmedHistory(PubmedArticle pubmedArticle)
+    {
+        PubMedPubDate? date = null;
+        //get the date for the history status of "pubmed"
+        foreach (var hx in pubmedArticle.PubmedData.History.PubMedPubDates)
+        {
+            if (!string.Equals("pubmed", hx.PubStatus)) continue;
+            date = hx;
+            break;
+        }
+        if (date == null) return null;
+
+        if (DateTime.TryParse($"{date.Year}-{date.Month}-{date.Day}", out var pubDate))
+            return pubDate;
+
+        return null;
     }
 }

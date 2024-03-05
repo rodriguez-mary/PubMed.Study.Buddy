@@ -22,14 +22,39 @@ public class PubMedClient : IPubMedClient
         _outputService = outputService;
     }
 
-    public async Task<List<Article>> FindArticles(ArticleFilter filter)
+    public async Task<List<Article>> FindArticles(List<ArticleFilter> filters)
     {
-        var articles = await _searchService.FindArticles(filter);
+        var articleIds = new List<string>();
+        var articles = new List<Article>();
 
-        foreach (var article in articles)
+        //find the articles
+        foreach (var filter in filters)
+        {
+            articles.AddRange(await _searchService.FindArticles(filter));
+        }
+
+        //get additional data about each article
+        for (var i = 0; i < articles.Count; i++)
+        {
+            var article = articles[i];
+
+            //deduplicate while we're at it
+            if (articleIds.Contains(article.Id))
+            {
+                articles.RemoveAt(i);
+                continue;
+            }
+
             article.ImpactScore = await _impactScoringService.GetImpactScore(article);
+            articleIds.Add(article.Id);
+        }
 
         return articles;
+    }
+
+    public async Task<List<Article>> FindArticles(ArticleFilter filter)
+    {
+        return await FindArticles(new List<ArticleFilter> { filter });
     }
 
     public async Task GenerateContent(List<Article> articles)

@@ -64,10 +64,11 @@ public class EUtilsSearchService : IPubMedSearchService
         var idList = new List<string>();
         var hasMoreData = true;
         var retStart = 0;
+        var retMax = 100;
 
         while (hasMoreData)
         {
-            var result = await _httpClient.GetAsync($"{uri}&retstart={retStart}");
+            var result = await _httpClient.GetAsync($"{uri}&retstart={retStart}&retmax={retMax}");
 
             result.EnsureSuccessStatusCode();
 
