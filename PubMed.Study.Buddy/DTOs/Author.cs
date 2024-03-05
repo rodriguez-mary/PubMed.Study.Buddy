@@ -8,5 +8,6 @@ public class Author
 
     public string? Initials { get; set; }
 
-    public bool Primary { get; set; } = false;
+    // Is this author listed first on the paper?
+    public bool First { get; set; } = false;
 }

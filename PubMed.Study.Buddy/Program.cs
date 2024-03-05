@@ -1,6 +1,11 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using PubMed.Study.Buddy.Domains.Client;
+using PubMed.Study.Buddy.Domains.ImpactScoring;
+using PubMed.Study.Buddy.Domains.ImpactScoring.CitationNumber;
+using PubMed.Study.Buddy.Domains.Output;
+using PubMed.Study.Buddy.Domains.Output.LocalIo;
 using PubMed.Study.Buddy.Domains.Search;
 using PubMed.Study.Buddy.Domains.Search.EUtils;
 using PubMed.Study.Buddy.DTOs;
@@ -18,19 +23,12 @@ builder.Services.AddSingleton<IConfiguration>(configurationBuilder.Build());
 
 builder.Services.AddLogging();
 builder.Services.AddHttpClient<IPubMedSearchService, EUtilsSearchService>();
-
-/*
-using var loggerFactory = LoggerFactory.Create(c =>
-{
-    c
-        .AddFilter("Microsoft", LogLevel.Warning)
-        .AddFilter("System", LogLevel.Warning)
-        .AddFilter("LoggingConsoleApp.Program", LogLevel.Debug)
-        .AddConsole();
-});*/
+builder.Services.AddSingleton<IImpactScoringService, CitationNumberImpactScoringService>();
+builder.Services.AddSingleton<IOutputService, LocalIoService>();
+builder.Services.AddSingleton<IPubMedClient, PubMedClient>();
 
 var serviceProvider = builder.Services.BuildServiceProvider();
-var pubMedSearchService = serviceProvider.GetRequiredService<IPubMedSearchService>();
+var pubMedClient = serviceProvider.GetRequiredService<IPubMedClient>();
 
 var articleFilter = new ArticleFilter
 {
@@ -40,8 +38,6 @@ var articleFilter = new ArticleFilter
     Journal = new List<string> { "Vet Surg" }
 };
 
-var client = new HttpClient()
-{
-};
+var articles = await pubMedClient.FindArticles(articleFilter);
 
-var results = await pubMedSearchService.FindArticles(articleFilter);
+await pubMedClient.GenerateContent(articles);

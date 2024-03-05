@@ -5,7 +5,7 @@ namespace PubMed.Study.Buddy.Domains.Search.EUtils.Models;
 [XmlRoot(ElementName = "eLinkResult")]
 public class ELinkResult
 {
-    public LinkSet LinkSet { get; set; }
+    public LinkSet LinkSet { get; set; } = new();
 }
 
 public class LinkSet
@@ -16,7 +16,7 @@ public class LinkSet
 public class LinkSetDb
 {
     [XmlElement(ElementName = "Link")]
-    public List<Link>? Links { get; set; } = new();
+    public List<Link> Links { get; set; } = new();
 }
 
 public class Link

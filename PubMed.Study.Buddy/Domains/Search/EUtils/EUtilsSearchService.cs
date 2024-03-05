@@ -5,7 +5,7 @@ using PubMed.Study.Buddy.DTOs;
 
 namespace PubMed.Study.Buddy.Domains.Search.EUtils;
 
-internal class EUtilsSearchService : IPubMedSearchService
+public class EUtilsSearchService : IPubMedSearchService
 {
     private const string DefaultEUtilsAddress = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/";
 
@@ -15,6 +15,7 @@ internal class EUtilsSearchService : IPubMedSearchService
 
     private static readonly XmlDeserializer<ESearchResult> SearchResultDeserializer = new();
     private static readonly XmlDeserializer<ELinkResult> LinkResultDeserializer = new();
+    private static readonly XmlDeserializer<EFetchResult> FetchResultDeserializer = new();
 
     public EUtilsSearchService(ILogger<EUtilsSearchService> logger, IConfiguration configuration, HttpClient httpClient)
     {
@@ -29,11 +30,23 @@ internal class EUtilsSearchService : IPubMedSearchService
 
     public async Task<List<Article>> FindArticles(ArticleFilter filter)
     {
+        var articles = new List<Article>();
+
         //todo validate year input
         var articleIds = await GetArticleIds(filter);
-        var citationCounts = await GetArticleCitationCounts(articleIds);
 
-        throw new NotImplementedException();
+        var citationCounts = await GetArticleCitationData(articleIds);
+        var articleMetadata = await GetArticleMetadata(articleIds);
+
+        foreach (var id in articleIds)
+        {
+            if (!articleMetadata.TryGetValue(id, out var fetchData)) continue;
+            if (!citationCounts.TryGetValue(id, out var linkData)) linkData = new ELinkResult();
+
+            articles.Add(Utilities.CompileArticleFromResponses(id, fetchData, linkData));
+        }
+
+        return articles;
     }
 
     //get list of article IDs
@@ -79,9 +92,9 @@ internal class EUtilsSearchService : IPubMedSearchService
     }
 
     //get citations per article
-    private async Task<Dictionary<string, int>> GetArticleCitationCounts(List<string> ids)
+    private async Task<Dictionary<string, ELinkResult>> GetArticleCitationData(List<string> ids)
     {
-        var citationCounts = new Dictionary<string, int>();
+        var citationCounts = new Dictionary<string, ELinkResult>();
 
         var baseUri =
             $"{EUtilsConstants.LinkEndpoint}?{EUtilsConstants.OriginalDatabaseParameter}={EUtilsConstants.PubMedDbId}&{EUtilsConstants.LinkTypeParameter}={EUtilsConstants.CitationLinkType}";
@@ -91,7 +104,7 @@ internal class EUtilsSearchService : IPubMedSearchService
         foreach (var id in ids)
         {
             await Task.Delay(1000);
-            var uri = $"{baseUri}&id={id}";
+            var uri = $"{baseUri}&{EUtilsConstants.IdParameter}={id}";
             var result = await _httpClient.GetAsync(uri);
 
             result.EnsureSuccessStatusCode();
@@ -99,25 +112,36 @@ internal class EUtilsSearchService : IPubMedSearchService
             var contentString = await result.Content.ReadAsStringAsync();
             var linkResult = LinkResultDeserializer.DeserializeXml(contentString);
 
-            citationCounts.Add(id, linkResult?.LinkSet.LinkSetDb?.Links?.Count ?? 0);
-        }
-
-        var byCitationNumber = new Dictionary<int, List<string>>();
-
-        foreach (var (k, v) in citationCounts)
-        {
-            if (!byCitationNumber.ContainsKey(v))
-                byCitationNumber.Add(v, new List<string>());
-
-            byCitationNumber[v].Add(k);
+            if (linkResult != null) citationCounts.Add(id, linkResult);
         }
 
         return citationCounts;
     }
 
     //query for metadata for the top X articles
-    private List<EFetchResult> GetArticleMetadata(List<string> articleIds)
+    private async Task<Dictionary<string, EFetchResult>> GetArticleMetadata(List<string> ids)
     {
-        throw new NotImplementedException();
+        var results = new Dictionary<string, EFetchResult>();
+
+        var baseUri =
+            $"{EUtilsConstants.FetchEndpoint}?{EUtilsConstants.DatabaseParameter}={EUtilsConstants.PubMedDbId}";
+        if (!string.IsNullOrEmpty(_apiKey))
+            baseUri += $"&{EUtilsConstants.ApiKeyParameter}={_apiKey}";
+
+        foreach (var id in ids)
+        {
+            await Task.Delay(1000);
+            var uri = $"{baseUri}&{EUtilsConstants.IdParameter}={id}";
+            var result = await _httpClient.GetAsync(uri);
+
+            result.EnsureSuccessStatusCode();
+
+            var contentString = await result.Content.ReadAsStringAsync();
+            var fetchResult = FetchResultDeserializer.DeserializeXml(contentString);
+
+            if (fetchResult != null) results.Add(id, fetchResult);
+        }
+
+        return results;
     }
 }

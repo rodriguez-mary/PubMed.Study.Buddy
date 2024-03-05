@@ -1,6 +1,6 @@
 ﻿namespace PubMed.Study.Buddy.Domains.ImpactScoring;
 
-internal interface IImpactScoringService
+public interface IImpactScoringService
 {
-    double GetImpactScore(DTOs.Article article);
+    Task<double> GetImpactScore(DTOs.Article article);
 }

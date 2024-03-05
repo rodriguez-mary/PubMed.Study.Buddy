@@ -6,7 +6,9 @@ public class Article
 {
     public string Id { get; set; } = string.Empty;
 
-    public Publication Publication { get; set; } = new();
+    public DateTime PublicationDate { get; set; } = DateTime.MinValue;
+
+    public string Abstract { get; set; } = string.Empty;
 
     public string Title { get; set; } = string.Empty;
 
@@ -14,7 +16,11 @@ public class Article
 
     public List<Author>? AuthorList { get; set; }
 
-    public List<string>? CategoryList { get; set; }
+    public List<string>? MeshMainHeadings { get; set; }
+
+    public Publication? Publication { get; set; }
+
+    public double ImpactScore { get; set; } = 0;
 
     /// <summary>
     /// List of PubMed article IDs that cite this article.

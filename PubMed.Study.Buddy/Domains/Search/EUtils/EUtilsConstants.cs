@@ -10,10 +10,13 @@ internal class EUtilsConstants
 
     public const string SearchEndpoint = "esearch.fcgi";
     public const string LinkEndpoint = "elink.fcgi";
+    public const string FetchEndpoint = "efetch.fcgi";
 
     // general parameters
 
     public const string ApiKeyParameter = "api_key";
+    public const string DatabaseParameter = "db";
+    public const string IdParameter = "id";
 
     // link endpoint parameters
 
@@ -23,7 +26,6 @@ internal class EUtilsConstants
 
     // search endpoint parameters
 
-    public const string DatabaseField = "db";
     public const string JournalField = "JOUR";
     public const string MeshField = "MESH";
     public const string MeshSubheadingField = "SUBH";
