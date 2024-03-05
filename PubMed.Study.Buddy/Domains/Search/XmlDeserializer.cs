@@ -1,7 +1,7 @@
 ﻿using System.Xml;
 using System.Xml.Serialization;
 
-namespace PubMed.Article.Extract.Utility.Domains.Search;
+namespace PubMed.Study.Buddy.Domains.Search;
 
 internal class XmlDeserializer<T>
 {

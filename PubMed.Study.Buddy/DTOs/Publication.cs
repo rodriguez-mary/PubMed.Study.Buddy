@@ -1,4 +1,4 @@
-﻿namespace PubMed.Article.Extract.Utility.DTOs;
+﻿namespace PubMed.Study.Buddy.DTOs;
 
 public class Publication
 {

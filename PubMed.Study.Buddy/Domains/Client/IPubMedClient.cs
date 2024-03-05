@@ -1,4 +1,4 @@
-﻿namespace PubMed.Article.Extract.Utility.Domains.Client;
+﻿namespace PubMed.Study.Buddy.Domains.Client;
 
 public interface IPubMedClient
 {

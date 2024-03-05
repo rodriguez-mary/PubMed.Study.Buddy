@@ -1,23 +1,22 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using PubMed.Article.Extract.Utility.Domains.Search;
-using PubMed.Article.Extract.Utility.Domains.Search.Models;
-using PubMed.Article.Extract.Utility.DTOs;
+using PubMed.Study.Buddy.Domains.Search.EUtils.Models;
+using PubMed.Study.Buddy.DTOs;
 
-namespace PubMed.Study.Buddy.Domains.Search;
+namespace PubMed.Study.Buddy.Domains.Search.EUtils;
 
-internal class PubMedSearchService : IPubMedSearchService
+internal class EUtilsSearchService : IPubMedSearchService
 {
     private const string DefaultEUtilsAddress = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/";
 
     private readonly string _apiKey;
-    private readonly ILogger<PubMedSearchService> _logger;
+    private readonly ILogger<EUtilsSearchService> _logger;
     private readonly HttpClient _httpClient;
 
     private static readonly XmlDeserializer<ESearchResult> SearchResultDeserializer = new();
     private static readonly XmlDeserializer<ELinkResult> LinkResultDeserializer = new();
 
-    public PubMedSearchService(ILogger<PubMedSearchService> logger, IConfiguration configuration, HttpClient httpClient)
+    public EUtilsSearchService(ILogger<EUtilsSearchService> logger, IConfiguration configuration, HttpClient httpClient)
     {
         var eUtilsAddress = configuration["pubmedEUtilsAddress"] ?? DefaultEUtilsAddress;
         var apiKey = configuration["pubmedApiKey"] ?? string.Empty;
@@ -28,7 +27,7 @@ internal class PubMedSearchService : IPubMedSearchService
         _httpClient.BaseAddress = new Uri(eUtilsAddress);
     }
 
-    public async Task<List<Article.Extract.Utility.DTOs.Article>> FindArticles(ArticleFilter filter)
+    public async Task<List<Article>> FindArticles(ArticleFilter filter)
     {
         //todo validate year input
         var articleIds = await GetArticleIds(filter);
@@ -40,9 +39,9 @@ internal class PubMedSearchService : IPubMedSearchService
     //get list of article IDs
     private async Task<List<string>> GetArticleIds(ArticleFilter filter)
     {
-        var uri = $"{PubMedConstants.SearchEndpoint}?{Utilities.GetQueryFromArticleFilter(filter)}";
+        var uri = $"{EUtilsConstants.SearchEndpoint}?{Utilities.GetQueryFromArticleFilter(filter)}";
         if (!string.IsNullOrEmpty(_apiKey))
-            uri += $"&{PubMedConstants.ApiKeyParameter}={_apiKey}";
+            uri += $"&{EUtilsConstants.ApiKeyParameter}={_apiKey}";
 
         return await PaginateThroughArticleSearch(uri);
     }
@@ -69,7 +68,7 @@ internal class PubMedSearchService : IPubMedSearchService
                 break;
             }
 
-            hasMoreData = (searchResponse.RetStart < searchResponse.Count);
+            hasMoreData = searchResponse.RetStart < searchResponse.Count;
 
             idList.AddRange(searchResponse.IdList);
 
@@ -85,9 +84,9 @@ internal class PubMedSearchService : IPubMedSearchService
         var citationCounts = new Dictionary<string, int>();
 
         var baseUri =
-            $"{PubMedConstants.LinkEndpoint}?{PubMedConstants.OriginalDatabaseParameter}={PubMedConstants.PubMedDbId}&{PubMedConstants.LinkTypeParameter}={PubMedConstants.CitationLinkType}";
+            $"{EUtilsConstants.LinkEndpoint}?{EUtilsConstants.OriginalDatabaseParameter}={EUtilsConstants.PubMedDbId}&{EUtilsConstants.LinkTypeParameter}={EUtilsConstants.CitationLinkType}";
         if (!string.IsNullOrEmpty(_apiKey))
-            baseUri += $"&{PubMedConstants.ApiKeyParameter}={_apiKey}";
+            baseUri += $"&{EUtilsConstants.ApiKeyParameter}={_apiKey}";
 
         foreach (var id in ids)
         {

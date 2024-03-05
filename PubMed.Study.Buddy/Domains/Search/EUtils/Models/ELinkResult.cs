@@ -1,6 +1,6 @@
 ﻿using System.Xml.Serialization;
 
-namespace PubMed.Article.Extract.Utility.Domains.Search.Models;
+namespace PubMed.Study.Buddy.Domains.Search.EUtils.Models;
 
 [XmlRoot(ElementName = "eLinkResult")]
 public class ELinkResult

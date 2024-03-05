@@ -1,9 +1,9 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using PubMed.Article.Extract.Utility.Domains.Search;
-using PubMed.Article.Extract.Utility.DTOs;
 using PubMed.Study.Buddy.Domains.Search;
+using PubMed.Study.Buddy.Domains.Search.EUtils;
+using PubMed.Study.Buddy.DTOs;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -17,7 +17,7 @@ var configurationBuilder = new ConfigurationBuilder()
 builder.Services.AddSingleton<IConfiguration>(configurationBuilder.Build());
 
 builder.Services.AddLogging();
-builder.Services.AddHttpClient<IPubMedSearchService, PubMedSearchService>();
+builder.Services.AddHttpClient<IPubMedSearchService, EUtilsSearchService>();
 
 /*
 using var loggerFactory = LoggerFactory.Create(c =>

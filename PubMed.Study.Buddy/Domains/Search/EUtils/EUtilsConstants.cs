@@ -1,6 +1,6 @@
-﻿namespace PubMed.Article.Extract.Utility.Domains.Search;
+﻿namespace PubMed.Study.Buddy.Domains.Search.EUtils;
 
-internal class PubMedConstants
+internal class EUtilsConstants
 {
     public const string PubMedBaseUrl = "https://pubmed.ncbi.nlm.nih.gov/";
 

@@ -1,6 +1,6 @@
-﻿using PubMed.Article.Extract.Utility.Domains.Search;
+﻿using PubMed.Study.Buddy.Domains.Search.EUtils;
 
-namespace PubMed.Article.Extract.Utility.DTOs;
+namespace PubMed.Study.Buddy.DTOs;
 
 public class Article
 {
@@ -10,7 +10,7 @@ public class Article
 
     public string Title { get; set; } = string.Empty;
 
-    public string PubMedUrl => $"{PubMedConstants.PubMedBaseUrl}{Id}";
+    public string PubMedUrl => $"{EUtilsConstants.PubMedBaseUrl}{Id}";
 
     public List<Author>? AuthorList { get; set; }
 

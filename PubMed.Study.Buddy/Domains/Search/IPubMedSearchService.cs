@@ -1,9 +1,9 @@
-﻿using PubMed.Article.Extract.Utility.DTOs;
+﻿using PubMed.Study.Buddy.DTOs;
 
-namespace PubMed.Article.Extract.Utility.Domains.Search;
+namespace PubMed.Study.Buddy.Domains.Search;
 
 internal interface IPubMedSearchService
 {
     //return a list of article Ids
-    public Task<List<DTOs.Article>> FindArticles(ArticleFilter filter);
+    public Task<List<Study.Buddy.DTOs.Article>> FindArticles(ArticleFilter filter);
 }
