@@ -22,6 +22,9 @@ public class MedlineCitation
 
     [XmlElement(ElementName = "MeshHeadingList")]
     public MeshHeadingList? MeshHeadingList { get; set; }
+
+    [XmlElement(ElementName = "PMID")]
+    public string Id { get; set; } = string.Empty;
 }
 
 public class PubmedData

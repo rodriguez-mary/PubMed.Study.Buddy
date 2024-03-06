@@ -55,16 +55,13 @@ internal static class Utilities
         return string.Join("&", queryParams);
     }
 
-    public static Article CompileArticleFromResponses(string id, EFetchResult fetchResponse, ELinkResult linkResponse)
+    public static Article CompileArticleFromResponses(string id, PubmedArticle pubMedArticle, ELinkResult linkResponse, string articleAbstract)
     {
         var article = new Article
         {
-            Id = id
+            Id = id,
+            Abstract = articleAbstract
         };
-
-        if (fetchResponse.PubmedArticles.Count <= 0) return article;
-
-        var pubMedArticle = fetchResponse.PubmedArticles.First(); //there should only be one
 
         var medlineCitation = pubMedArticle.MedlineCitation;
         var medlineArticle = medlineCitation.Article;

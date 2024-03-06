@@ -37,13 +37,15 @@ public class EUtilsSearchService : IPubMedSearchService
 
         var citationCounts = await GetArticleCitationData(articleIds);
         var articleMetadata = await GetArticleMetadata(articleIds);
+        var articleAbstracts = await GetArticleAbstract(articleIds);
 
         foreach (var id in articleIds)
         {
             if (!articleMetadata.TryGetValue(id, out var fetchData)) continue;
             if (!citationCounts.TryGetValue(id, out var linkData)) linkData = new ELinkResult();
+            if (!articleAbstracts.TryGetValue(id, out var articleAbstract)) articleAbstract = string.Empty;
 
-            articles.Add(Utilities.CompileArticleFromResponses(id, fetchData, linkData));
+            articles.Add(Utilities.CompileArticleFromResponses(id, fetchData, linkData, articleAbstract));
         }
 
         return articles;
@@ -120,9 +122,45 @@ public class EUtilsSearchService : IPubMedSearchService
     }
 
     //query for metadata for the top X articles
-    private async Task<Dictionary<string, EFetchResult>> GetArticleMetadata(List<string> ids)
+    private async Task<Dictionary<string, PubmedArticle>> GetArticleMetadata(List<string> ids)
     {
-        var results = new Dictionary<string, EFetchResult>();
+        var results = new Dictionary<string, PubmedArticle>();
+
+        var baseUri =
+            $"{EUtilsConstants.FetchEndpoint}?{EUtilsConstants.DatabaseParameter}={EUtilsConstants.PubMedDbId}";
+        if (!string.IsNullOrEmpty(_apiKey))
+            baseUri += $"&{EUtilsConstants.ApiKeyParameter}={_apiKey}";
+
+        for (var i = 0; i < ids.Count; i += 100)
+        {
+            //request in bulk
+            var requestIds = string.Join(",", ids.GetRange(i, 100));
+
+            var uri = $"{baseUri}&{EUtilsConstants.IdParameter}={requestIds}";
+            var result = await _httpClient.GetAsync(uri);
+
+            result.EnsureSuccessStatusCode();
+
+            var contentString = await result.Content.ReadAsStringAsync();
+            var fetchResult = FetchResultDeserializer.DeserializeXml(contentString);
+
+            if (fetchResult != null)
+            {
+                foreach (var article in fetchResult.PubmedArticles)
+                {
+                    results.Add(article.MedlineCitation.Id, article);
+                }
+            }
+        }
+
+        return results;
+    }
+
+    private async Task<Dictionary<string, string>> GetArticleAbstract(List<string> ids)
+    {
+        //https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=37846027&retmode=text&rettype=abstract
+
+        var results = new Dictionary<string, string>();
 
         var baseUri =
             $"{EUtilsConstants.FetchEndpoint}?{EUtilsConstants.DatabaseParameter}={EUtilsConstants.PubMedDbId}";
@@ -131,15 +169,13 @@ public class EUtilsSearchService : IPubMedSearchService
 
         foreach (var id in ids)
         {
-            var uri = $"{baseUri}&{EUtilsConstants.IdParameter}={id}";
+            var uri = $"{baseUri}&{EUtilsConstants.IdParameter}={id}&retmode=text&rettype=abstract";
             var result = await _httpClient.GetAsync(uri);
 
             result.EnsureSuccessStatusCode();
 
             var contentString = await result.Content.ReadAsStringAsync();
-            var fetchResult = FetchResultDeserializer.DeserializeXml(contentString);
-
-            if (fetchResult != null) results.Add(id, fetchResult);
+            results.Add(id, contentString);
         }
 
         return results;

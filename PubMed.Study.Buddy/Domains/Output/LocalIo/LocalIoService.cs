@@ -28,14 +28,14 @@ public class LocalIoService : IOutputService
             csv.AppendLine(
                 $"{article.Id}," +
                 $"{article.ImpactScore}," +
-                $"\"{article.Title}\"," +
-                $"\"{GetFirstAuthorLastFirstName(article)}\"," +
+                $"\"{article.Title.Replace("\"", "'")}\"," +
+                $"\"{GetFirstAuthorLastFirstName(article).Replace("\"", "'")}\"," +
                 $"{article.PublicationDate.ToString("yyyy-MM-dd")}," +
-                $"\"{article.Publication?.JournalName ?? string.Empty}\"," +
+                $"\"{article.Publication?.JournalName.Replace("\"", "'") ?? string.Empty}\"," +
                 $"\"{(article.MajorTopicMeshHeadings != null ? string.Join(",", article.MajorTopicMeshHeadings) : string.Empty)}\"," +
                 $"{(article.CitedBy == null ? "0" : article.CitedBy.Count)}," +
-                $"\"{article.Abstract}\"," +
-                $"{article.PubMedUrl}");
+                $"\"{article.Abstract.Replace("\"", "'")}\"," +  //double quote for break lines
+                $"\"{article.PubMedUrl}\"");
         }
 
         File.WriteAllText(Path.Combine(_fileDirectory, $"{_articleListCsvFileName}.csv"), csv.ToString());
