@@ -42,7 +42,7 @@ var threeYearArticles = new ArticleFilter
     EndYear = 2024,
     StartYear = 2021,
     MeshTerm = vetSurgMeshTerms,
-    Journal = new List<string> { "Vet Surg" }
+    Journal = new List<string> { "J Feline Med Surg", "J Vet Emerg Crit Care (San Antonio)", "J Vet Intern Med", "Vet Radiol Ultrasound" }
 };
 
 var fiveYearArticles = new ArticleFilter
@@ -50,10 +50,10 @@ var fiveYearArticles = new ArticleFilter
     EndYear = 2024,
     StartYear = 2019,
     MeshTerm = vetSurgMeshTerms,
-    Journal = new List<string> { "J Vet Intern Med" }
+    Journal = new List<string> { "J Am Vet Med Assoc", "J Small Anim Pract", "Vet Comp Orthop Traumatol", "Vet Surg" }
 };
 
-var articles = await pubMedClient.FindArticles(new List<ArticleFilter> { threeYearArticles });
+var articles = await pubMedClient.FindArticles(new List<ArticleFilter> { threeYearArticles, fiveYearArticles });
 
 await pubMedClient.GenerateContent(articles);
 

@@ -84,8 +84,7 @@ public class EUtilsSearchService : IPubMedSearchService
                 break;
             }
 
-            //hasMoreData = searchResponse.RetStart < searchResponse.Count;
-            hasMoreData = false;
+            hasMoreData = searchResponse.RetStart < searchResponse.Count;
 
             idList.AddRange(searchResponse.IdList);
 
@@ -124,6 +123,7 @@ public class EUtilsSearchService : IPubMedSearchService
     //query for metadata for the top X articles
     private async Task<Dictionary<string, PubmedArticle>> GetArticleMetadata(List<string> ids)
     {
+        const int stepCount = 100;
         var results = new Dictionary<string, PubmedArticle>();
 
         var baseUri =
@@ -131,10 +131,11 @@ public class EUtilsSearchService : IPubMedSearchService
         if (!string.IsNullOrEmpty(_apiKey))
             baseUri += $"&{EUtilsConstants.ApiKeyParameter}={_apiKey}";
 
-        for (var i = 0; i < ids.Count; i += 100)
+        for (var i = 0; i < ids.Count; i += stepCount)
         {
             //request in bulk
-            var requestIds = string.Join(",", ids.GetRange(i, 100));
+            var count = i + stepCount > ids.Count ? ids.Count - i : stepCount;
+            var requestIds = string.Join(",", ids.GetRange(i, count));
 
             var uri = $"{baseUri}&{EUtilsConstants.IdParameter}={requestIds}";
             var result = await _httpClient.GetAsync(uri);
