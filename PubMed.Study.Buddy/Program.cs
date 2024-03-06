@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Polly;
+using Polly.Extensions.Http;
 using PubMed.Study.Buddy.Domains.Client;
 using PubMed.Study.Buddy.Domains.ImpactScoring;
 using PubMed.Study.Buddy.Domains.ImpactScoring.CitationNumber;
@@ -22,7 +24,10 @@ var configurationBuilder = new ConfigurationBuilder()
 builder.Services.AddSingleton<IConfiguration>(configurationBuilder.Build());
 
 builder.Services.AddLogging();
-builder.Services.AddHttpClient<IPubMedSearchService, EUtilsSearchService>();
+builder.Services.AddHttpClient<IPubMedSearchService, EUtilsSearchService>()
+    .SetHandlerLifetime(TimeSpan.FromMinutes(5)) //Set lifetime to five minutes
+    .AddPolicyHandler(GetRetryPolicy());
+
 builder.Services.AddSingleton<IImpactScoringService, CitationNumberImpactScoringService>();
 builder.Services.AddSingleton<IOutputService, LocalIoService>();
 builder.Services.AddSingleton<IPubMedClient, PubMedClient>();
@@ -30,7 +35,7 @@ builder.Services.AddSingleton<IPubMedClient, PubMedClient>();
 var serviceProvider = builder.Services.BuildServiceProvider();
 var pubMedClient = serviceProvider.GetRequiredService<IPubMedClient>();
 
-var vetSurgMeshTerms = new List<string> { "veterinary", "surgery" };
+var vetSurgMeshTerms = new List<List<string>> { new() { "veterinary" }, new() { "surgery" }, new() { "dogs", "cats" } };
 
 var threeYearArticles = new ArticleFilter
 {
@@ -48,6 +53,15 @@ var fiveYearArticles = new ArticleFilter
     Journal = new List<string> { "J Vet Intern Med" }
 };
 
-var articles = await pubMedClient.FindArticles(new List<ArticleFilter> { threeYearArticles, fiveYearArticles });
+var articles = await pubMedClient.FindArticles(new List<ArticleFilter> { threeYearArticles });
 
 await pubMedClient.GenerateContent(articles);
+
+static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
+{
+    return HttpPolicyExtensions
+        .HandleTransientHttpError()
+        .OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+        .WaitAndRetryAsync(6, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2,
+            retryAttempt)));
+}

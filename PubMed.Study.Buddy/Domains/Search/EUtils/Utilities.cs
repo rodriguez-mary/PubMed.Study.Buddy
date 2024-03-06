@@ -1,7 +1,6 @@
 ﻿using PubMed.Study.Buddy.Domains.Search.EUtils.Models;
 using PubMed.Study.Buddy.DTOs;
 using System.Globalization;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 using Author = PubMed.Study.Buddy.DTOs.Author;
 
 namespace PubMed.Study.Buddy.Domains.Search.EUtils;
@@ -34,12 +33,20 @@ internal static class Utilities
 
         // MeSH terms parameters
         // I cannot for the life of me figure out why some mesh terms are listed as majors, some as minors, and some just as terms, so we're searching for any of them
-        var meshParams = filter.MeshTerm?.Select(term =>
-            $"({string.Join("+OR+", $"{term}[{EUtilsConstants.MeshField}]",
-                $"{term}[{EUtilsConstants.MeshMajorTopicField}]",
-                $"{term}[{EUtilsConstants.MeshSubheadingField}]")})") ?? Enumerable.Empty<string>();
-        if (meshParams.Any())
-            termParams.Add(string.Join("+AND+", meshParams));
+        if (filter.MeshTerm != null)
+        {
+            foreach (var orList in filter.MeshTerm)
+            {
+                var orTerms = new List<string>();
+                foreach (var term in orList)
+                {
+                    orTerms.Add(string.Join("+OR+", $"{term}[{EUtilsConstants.MeshField}]",
+                        $"{term}[{EUtilsConstants.MeshMajorTopicField}]",
+                        $"{term}[{EUtilsConstants.MeshSubheadingField}]"));
+                }
+                termParams.Add($"({string.Join("+OR+", orTerms)})");
+            }
+        }
 
         // Put together the journal & MeSH params into the single term query parameter
         if (termParams.Any())
@@ -59,7 +66,8 @@ internal static class Utilities
 
         var pubMedArticle = fetchResponse.PubmedArticles.First(); //there should only be one
 
-        var medlineArticle = pubMedArticle.MedlineCitation.Article;
+        var medlineCitation = pubMedArticle.MedlineCitation;
+        var medlineArticle = medlineCitation.Article;
         article.Title = medlineArticle.ArticleTitle;
 
         var publishedDate = GetPublishedDateFromArticleDate(pubMedArticle) ?? GetPublishedDateFromPubmedHistory(pubMedArticle);
@@ -101,14 +109,23 @@ internal static class Utilities
             }
         }
 
-        if (medlineArticle.MeshHeadingList is { MeshHeadings.Count: > 0 })
+        if (medlineCitation.MeshHeadingList is { MeshHeadings.Count: > 0 })
         {
-            article.MeshMainHeadings = new List<string>();
-            foreach (var meshHeading in medlineArticle.MeshHeadingList.MeshHeadings)
+            var majorMeshHeading = new List<string>();
+            var minorMeshHeading = new List<string>();
+
+            foreach (var meshHeading in medlineCitation.MeshHeadingList.MeshHeadings)
             {
-                if (meshHeading.DescriptorName != null)
-                    article.MeshMainHeadings.Add(meshHeading.DescriptorName.Name);
+                if (meshHeading.DescriptorName == null) continue;
+
+                if (string.Equals(meshHeading.DescriptorName.MajorTopicYn, "Y"))
+                    majorMeshHeading.Add(meshHeading.DescriptorName.Name);
+                else
+                    minorMeshHeading.Add(meshHeading.DescriptorName.Name);
             }
+
+            if (majorMeshHeading.Count > 0) article.MajorTopicMeshHeadings = majorMeshHeading;
+            if (minorMeshHeading.Count > 0) article.MinorTopicMeshHeadings = minorMeshHeading;
         }
 
         if (linkResponse.LinkSet.LinkSetDb is { Links.Count: > 0 })

@@ -78,11 +78,12 @@ public class EUtilsSearchService : IPubMedSearchService
 
             if (searchResponse == null)
             {
-                //throw error
+                //todo throw error
                 break;
             }
 
-            hasMoreData = searchResponse.RetStart < searchResponse.Count;
+            //hasMoreData = searchResponse.RetStart < searchResponse.Count;
+            hasMoreData = false;
 
             idList.AddRange(searchResponse.IdList);
 
@@ -104,7 +105,6 @@ public class EUtilsSearchService : IPubMedSearchService
 
         foreach (var id in ids)
         {
-            await Task.Delay(1000);
             var uri = $"{baseUri}&{EUtilsConstants.IdParameter}={id}";
             var result = await _httpClient.GetAsync(uri);
 
@@ -131,7 +131,6 @@ public class EUtilsSearchService : IPubMedSearchService
 
         foreach (var id in ids)
         {
-            await Task.Delay(1000);
             var uri = $"{baseUri}&{EUtilsConstants.IdParameter}={id}";
             var result = await _httpClient.GetAsync(uri);
 

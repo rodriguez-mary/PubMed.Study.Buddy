@@ -12,12 +12,16 @@ public class EFetchResult
 public class PubmedArticle
 {
     public MedlineCitation MedlineCitation { get; set; } = new();
+
     public PubmedData PubmedData { get; set; } = new();
 }
 
 public class MedlineCitation
 {
     public EFetchArticle Article { get; set; } = new();
+
+    [XmlElement(ElementName = "MeshHeadingList")]
+    public MeshHeadingList? MeshHeadingList { get; set; }
 }
 
 public class PubmedData
@@ -27,6 +31,7 @@ public class PubmedData
 
 public class PubMedHistory
 {
+    [XmlElement(ElementName = "PubMedPubDate")]
     public List<PubMedPubDate> PubMedPubDates { get; set; } = new();
 }
 
@@ -50,9 +55,6 @@ public class EFetchArticle
     public AuthorList? AuthorList { get; set; }
 
     public ArticleDate? ArticleDate { get; set; }
-
-    [XmlElement(ElementName = "MeshHeadingList")]
-    public MeshHeadingList? MeshHeadingList { get; set; }
 }
 
 public class Journal

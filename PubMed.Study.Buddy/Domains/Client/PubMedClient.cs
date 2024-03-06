@@ -27,18 +27,18 @@ public class PubMedClient : IPubMedClient
         var articleIds = new List<string>();
         var articles = new List<Article>();
 
-        //find the articles
+        // find the articles
         foreach (var filter in filters)
         {
             articles.AddRange(await _searchService.FindArticles(filter));
         }
 
-        //get additional data about each article
+        // process each article, cleaning up data and adding additional data
         for (var i = 0; i < articles.Count; i++)
         {
             var article = articles[i];
 
-            //deduplicate while we're at it
+            //deduplicate
             if (articleIds.Contains(article.Id))
             {
                 articles.RemoveAt(i);
