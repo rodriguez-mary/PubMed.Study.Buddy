@@ -26,7 +26,6 @@
 
   <ItemGroup>
     <Folder Include="Domains\ImpactScoring\MinMax\" />
-    <Folder Include="Domains\FlashCard\" />
   </ItemGroup>
 
 </Project>

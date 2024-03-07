@@ -106,9 +106,21 @@ public class MeshHeadingList
 public class MeshHeading
 {
     public DescriptorName? DescriptorName { get; set; }
+
+    [XmlElement(ElementName = "QualifierName")]
+    public List<QualifierName>? QualifierNames { get; set; }
 }
 
 public class DescriptorName
+{
+    [XmlAttribute(AttributeName = "MajorTopicYN")]
+    public string MajorTopicYn { get; set; } = "N";
+
+    [XmlText]
+    public string Name { get; set; } = string.Empty;
+}
+
+public class QualifierName
 {
     [XmlAttribute(AttributeName = "MajorTopicYN")]
     public string MajorTopicYn { get; set; } = "N";

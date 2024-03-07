@@ -118,7 +118,23 @@ internal static class Utilities
                 if (string.Equals(meshHeading.DescriptorName.MajorTopicYn, "Y"))
                     majorMeshHeading.Add(meshHeading.DescriptorName.Name);
                 else
-                    minorMeshHeading.Add(meshHeading.DescriptorName.Name);
+                {
+                    //if the descriptor isn't flagged as major topic, check the qualifiers
+                    //looking at the pubmed data, it seems many articles pre-2020 are flagged in this way rather than flagging on the descriptor
+                    if (meshHeading.QualifierNames != null)
+                    {
+                        var major = meshHeading.QualifierNames.Any(qualifierName => string.Equals(qualifierName.MajorTopicYn, "Y"));
+
+                        if (major)
+                            majorMeshHeading.Add(meshHeading.DescriptorName.Name);
+                        else
+                            minorMeshHeading.Add(meshHeading.DescriptorName.Name);
+                    }
+                    else
+                    {
+                        minorMeshHeading.Add(meshHeading.DescriptorName.Name);
+                    }
+                }
             }
 
             if (majorMeshHeading.Count > 0) article.MajorTopicMeshHeadings = majorMeshHeading;
