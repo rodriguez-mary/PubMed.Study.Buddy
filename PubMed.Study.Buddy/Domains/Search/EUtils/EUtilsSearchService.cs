@@ -13,10 +13,6 @@ public class EUtilsSearchService : IPubMedSearchService
     private readonly ILogger<EUtilsSearchService> _logger;
     private readonly HttpClient _httpClient;
 
-    private static readonly XmlDeserializer<ESearchResult> SearchResultDeserializer = new();
-    private static readonly XmlDeserializer<ELinkResult> LinkResultDeserializer = new();
-    private static readonly XmlDeserializer<EFetchResult> FetchResultDeserializer = new();
-
     public EUtilsSearchService(ILogger<EUtilsSearchService> logger, IConfiguration configuration, HttpClient httpClient)
     {
         var eUtilsAddress = configuration["pubmedEUtilsAddress"] ?? DefaultEUtilsAddress;
@@ -76,7 +72,7 @@ public class EUtilsSearchService : IPubMedSearchService
 
             var contentString = await result.Content.ReadAsStringAsync();
 
-            var searchResponse = SearchResultDeserializer.DeserializeXml(contentString);
+            var searchResponse = XmlDeserializer<ESearchResult>.DeserializeXml(contentString);
 
             if (searchResponse == null)
             {
@@ -112,7 +108,7 @@ public class EUtilsSearchService : IPubMedSearchService
             result.EnsureSuccessStatusCode();
 
             var contentString = await result.Content.ReadAsStringAsync();
-            var linkResult = LinkResultDeserializer.DeserializeXml(contentString);
+            var linkResult = XmlDeserializer<ELinkResult>.DeserializeXml(contentString);
 
             if (linkResult != null) citationCounts.Add(id, linkResult);
         }
@@ -143,7 +139,7 @@ public class EUtilsSearchService : IPubMedSearchService
             result.EnsureSuccessStatusCode();
 
             var contentString = await result.Content.ReadAsStringAsync();
-            var fetchResult = FetchResultDeserializer.DeserializeXml(contentString);
+            var fetchResult = XmlDeserializer<EFetchResult>.DeserializeXml(contentString);
 
             if (fetchResult != null)
             {

@@ -6,22 +6,9 @@ using PubMed.Study.Buddy.DTOs;
 
 namespace PubMed.Study.Buddy.Domains.Client;
 
-public class PubMedClient : IPubMedClient
+public class PubMedClient(ILogger<PubMedClient> _, IPubMedSearchService searchService,
+    IImpactScoringService impactScoringService, IOutputService outputService) : IPubMedClient
 {
-    private readonly ILogger _logger;
-    private readonly IPubMedSearchService _searchService;
-    private readonly IImpactScoringService _impactScoringService;
-    private readonly IOutputService _outputService;
-
-    public PubMedClient(ILogger<PubMedClient> logger, IPubMedSearchService searchService,
-        IImpactScoringService impactScoringService, IOutputService outputService)
-    {
-        _logger = logger;
-        _searchService = searchService;
-        _impactScoringService = impactScoringService;
-        _outputService = outputService;
-    }
-
     public async Task<List<Article>> FindArticles(List<ArticleFilter> filters)
     {
         var articleIds = new List<string>();
@@ -30,7 +17,7 @@ public class PubMedClient : IPubMedClient
         // find the articles
         foreach (var filter in filters)
         {
-            articles.AddRange(await _searchService.FindArticles(filter));
+            articles.AddRange(await searchService.FindArticles(filter));
         }
 
         // process each article, cleaning up data and adding additional data
@@ -45,7 +32,7 @@ public class PubMedClient : IPubMedClient
                 continue;
             }
 
-            article.ImpactScore = await _impactScoringService.GetImpactScore(article);
+            article.ImpactScore = await impactScoringService.GetImpactScore(article);
             articleIds.Add(article.Id);
         }
 
@@ -59,6 +46,6 @@ public class PubMedClient : IPubMedClient
 
     public async Task GenerateContent(List<Article> articles)
     {
-        await _outputService.GenerateArticleList(articles);
+        await outputService.GenerateArticleList(articles);
     }
 }

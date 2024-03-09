@@ -1,36 +1,25 @@
 ﻿using System.Xml;
 using System.Xml.Serialization;
+using PubMed.Study.Buddy.Domains.Search.Exceptions;
 
 namespace PubMed.Study.Buddy.Domains.Search;
 
-internal class XmlDeserializer<T>
+internal static class XmlDeserializer<T>
 {
-    public T? DeserializeXml(string data)
+    public static T? DeserializeXml(string data)
     {
         var serializer = new XmlSerializer(typeof(T));
 
         try
         {
-            using (var reader = new StringReader(data))
-            {
-                var xml = serializer.Deserialize(reader);
-                if (xml == null) return default;
-                return (T)xml;
-            }
+            using var reader = new StringReader(data);
+            var xml = serializer.Deserialize(reader);
+            if (xml == null) return default;
+            return (T)xml;
         }
-        catch (InvalidOperationException ex)
+        catch (Exception ex) when (ex is InvalidOperationException or XmlException)
         {
-            // Handle exceptions related to serialization issues
+            throw new InvalidPubMedDataException(data, ex.Message);
         }
-        catch (XmlException ex)
-        {
-            // Handle XML format issues
-        }
-        catch (Exception ex)
-        {
-            // Handle other exceptions
-        }
-
-        return default;
     }
 }

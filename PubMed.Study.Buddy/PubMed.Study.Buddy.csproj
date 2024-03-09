@@ -24,8 +24,4 @@
     </None>
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Domains\ImpactScoring\MinMax\" />
-  </ItemGroup>
-
 </Project>
