@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using PubMed.Study.Buddy.Domains.Search.EUtils.Models;
+using PubMed.Study.Buddy.Domains.Search.Exceptions;
 using PubMed.Study.Buddy.DTOs;
 
 namespace PubMed.Study.Buddy.Domains.Search.EUtils;
@@ -76,19 +77,26 @@ public class EUtilsSearchService : IPubMedSearchService
 
             var contentString = await result.Content.ReadAsStringAsync();
 
-            var searchResponse = XmlDeserializer<ESearchResult>.DeserializeXml(contentString);
-
-            if (searchResponse == null)
+            try
             {
-                //todo throw error
-                break;
+                var searchResponse = XmlDeserializer<ESearchResult>.DeserializeXml(contentString);
+
+                if (searchResponse == null)
+                {
+                    //todo throw error
+                    break;
+                }
+
+                hasMoreData = searchResponse.RetStart < searchResponse.Count;
+
+                idList.AddRange(searchResponse.IdList);
+
+                retStart += searchResponse.RetMax;
             }
-
-            hasMoreData = searchResponse.RetStart < searchResponse.Count;
-
-            idList.AddRange(searchResponse.IdList);
-
-            retStart += searchResponse.RetMax;
+            catch (InvalidPubMedDataException)
+            {
+                _logger.LogError("Invalid xml in search request for URI {uri}.", uri);
+            }
         }
 
         return idList;
@@ -112,9 +120,16 @@ public class EUtilsSearchService : IPubMedSearchService
             result.EnsureSuccessStatusCode();
 
             var contentString = await result.Content.ReadAsStringAsync();
-            var linkResult = XmlDeserializer<ELinkResult>.DeserializeXml(contentString);
+            try
+            {
+                var linkResult = XmlDeserializer<ELinkResult>.DeserializeXml(contentString);
 
-            if (linkResult != null) citationCounts.Add(id, linkResult);
+                if (linkResult != null) citationCounts.Add(id, linkResult);
+            }
+            catch (InvalidPubMedDataException)
+            {
+                _logger.LogError("Invalid xml from citation request for id {id}.", id);
+            }
         }
 
         return citationCounts;
@@ -141,15 +156,21 @@ public class EUtilsSearchService : IPubMedSearchService
             var result = await _httpClient.GetAsync(uri);
 
             result.EnsureSuccessStatusCode();
-
-            var contentString = await result.Content.ReadAsStringAsync();
-            var fetchResult = XmlDeserializer<EFetchResult>.DeserializeXml(contentString);
-
-            if (fetchResult == null) continue;
-
-            foreach (var article in fetchResult.PubmedArticles)
+            try
             {
-                results.Add(article.MedlineCitation.Id, article);
+                var contentString = await result.Content.ReadAsStringAsync();
+                var fetchResult = XmlDeserializer<EFetchResult>.DeserializeXml(contentString);
+
+                if (fetchResult == null) continue;
+
+                foreach (var article in fetchResult.PubmedArticles)
+                {
+                    results.Add(article.MedlineCitation.Id, article);
+                }
+            }
+            catch (InvalidPubMedDataException)
+            {
+                _logger.LogError("Invalid xml in fetch request for ids {ids}.", string.Join(", ", requestIds));
             }
         }
 

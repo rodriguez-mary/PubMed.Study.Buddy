@@ -158,7 +158,7 @@ public class UtilitiesTests
         const string title = "article title";
         var article = Utilities.CompileArticleFromResponses(string.Empty,
             new PubmedArticle
-            { MedlineCitation = new MedlineCitation { Article = new EFetchArticle { ArticleTitle = title } } },
+            { MedlineCitation = new MedlineCitation { Article = new EFetchArticle { DynamicArticleTitle = title } } },
             new ELinkResult(), string.Empty);
 
         Assert.IsNotNull(article);
@@ -411,7 +411,7 @@ public class UtilitiesTests
                     {
                         Journal = new Journal
                         {
-                            Title = journalName,
+                            DynamicTitle = journalName,
                             JournalIssue = new JournalIssue
                             {
                                 PubDate = new PubDate { Month = journalMonth.ToString(), Year = journalYear.ToString() },

@@ -1,6 +1,11 @@
-﻿using System.Xml.Serialization;
+﻿using System.Text;
+using System.Xml;
+using System.Xml.Serialization;
 
 namespace PubMed.Study.Buddy.Domains.Search.EUtils.Models;
+
+//PubMed sometimes encodes article data with xml-like syntax, such as CO<sub>2</sub>
+//to accomodate this, any strings that we read in must have a two-step process to handle "XML nodes" in leaf node properties
 
 [XmlRoot(ElementName = "PubmedArticleSet")]
 public class EFetchResult
@@ -51,7 +56,23 @@ public class PubMedPubDate
 
 public class EFetchArticle
 {
-    public string ArticleTitle { get; set; } = string.Empty;
+    [XmlIgnore]
+    public string ArticleTitle
+    {
+        get
+        {
+            if (DynamicArticleTitle is not XmlNode[] nodes) return DynamicArticleTitle.ToString();
+
+            var stringBuilder = new StringBuilder();
+            foreach (var node in nodes)
+                stringBuilder.Append(node.OuterXml);
+
+            return stringBuilder.ToString();
+        }
+    }
+
+    [XmlElement(ElementName = "ArticleTitle")]
+    public dynamic DynamicArticleTitle { get; set; } = string.Empty;
 
     public Journal? Journal { get; set; }
 
@@ -64,7 +85,24 @@ public class EFetchArticle
 public class Journal
 {
     public JournalIssue? JournalIssue { get; set; }
-    public string Title { get; set; } = string.Empty;
+
+    [XmlIgnore]
+    public string Title
+    {
+        get
+        {
+            if (DynamicTitle is not XmlNode[] nodes) return DynamicTitle.ToString();
+
+            var stringBuilder = new StringBuilder();
+            foreach (var node in nodes)
+                stringBuilder.Append(node.OuterXml);
+
+            return stringBuilder.ToString();
+        }
+    }
+
+    [XmlElement(ElementName = "Title")]
+    public dynamic DynamicTitle { get; set; } = string.Empty;
 }
 
 public class JournalIssue
