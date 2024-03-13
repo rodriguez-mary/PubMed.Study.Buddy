@@ -1,8 +1,6 @@
-﻿using Newtonsoft.Json.Linq;
-using PubMed.Study.Buddy.Domains.Search;
-using System.Xml.Linq;
-using System.Xml.Serialization;
+﻿using PubMed.Study.Buddy.Domains.Search;
 using PubMed.Study.Buddy.Domains.Search.Exceptions;
+using System.Xml.Serialization;
 
 namespace PubMed.Study.Buddy.Tests.Domains.Search;
 
@@ -15,7 +13,7 @@ public class XmlDeserializerTests
         const string attributeValue = "attribute_value";
         const string idValue = "id_value";
 
-        var xmlData = $"<XmlTestClass Attribute=\"{attributeValue}\"><Id>{idValue}</Id></XmlTestClass>";
+        const string xmlData = $"<XmlTestClass Attribute=\"{attributeValue}\"><Id>{idValue}</Id></XmlTestClass>";
 
         var result = XmlDeserializer<XmlTestClass>.DeserializeXml(xmlData);
 
@@ -25,10 +23,18 @@ public class XmlDeserializerTests
     }
 
     [TestMethod]
-    [ExpectedException(typeof(InvalidPubMedDataException))]
     public void DeserializeXml_InvalidXmlThrowsException()
     {
-        _ = XmlDeserializer<XmlTestClass>.DeserializeXml("this ain't xml");
+        const string badData = "this ain't xml";
+        try
+        {
+            _ = XmlDeserializer<XmlTestClass>.DeserializeXml(badData);
+            Assert.Fail();
+        }
+        catch (InvalidPubMedDataException ex)
+        {
+            Assert.AreEqual(badData, ex.InvalidData);
+        }
     }
 }
 

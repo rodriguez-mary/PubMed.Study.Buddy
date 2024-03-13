@@ -16,7 +16,7 @@ public class LinkSet
 public class LinkSetDb
 {
     [XmlElement(ElementName = "Link")]
-    public List<Link> Links { get; set; } = new();
+    public List<Link> Links { get; set; } = [];
 }
 
 public class Link

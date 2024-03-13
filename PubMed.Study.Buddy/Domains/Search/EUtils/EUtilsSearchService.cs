@@ -10,16 +10,16 @@ public class EUtilsSearchService : IPubMedSearchService
     private const string DefaultEUtilsAddress = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/";
 
     private readonly string _apiKey;
-    private readonly ILogger<EUtilsSearchService> _logger;
     private readonly HttpClient _httpClient;
+    private readonly ILogger<EUtilsSearchService> _logger;
 
     public EUtilsSearchService(ILogger<EUtilsSearchService> logger, IConfiguration configuration, HttpClient httpClient)
     {
         var eUtilsAddress = configuration["pubmedEUtilsAddress"] ?? DefaultEUtilsAddress;
         var apiKey = configuration["pubmedApiKey"] ?? string.Empty;
 
-        _apiKey = apiKey;
         _logger = logger;
+        _apiKey = apiKey;
         _httpClient = httpClient;
         _httpClient.BaseAddress = new Uri(eUtilsAddress);
     }
@@ -54,7 +54,11 @@ public class EUtilsSearchService : IPubMedSearchService
         if (!string.IsNullOrEmpty(_apiKey))
             uri += $"&{EUtilsConstants.ApiKeyParameter}={_apiKey}";
 
-        return await PaginateThroughArticleSearch(uri);
+        var ids = await PaginateThroughArticleSearch(uri);
+
+        _logger.LogInformation("{articleCount} article IDs returned from eSearch.", ids.Count);
+
+        return ids;
     }
 
     private async Task<List<string>> PaginateThroughArticleSearch(string uri)
@@ -62,11 +66,11 @@ public class EUtilsSearchService : IPubMedSearchService
         var idList = new List<string>();
         var hasMoreData = true;
         var retStart = 0;
-        var retMax = 100;
+        const int retMax = 100;
 
         while (hasMoreData)
         {
-            var result = await _httpClient.GetAsync($"{uri}&retstart={retStart}&retmax={retMax}");
+            var result = await _httpClient.GetAsync($"{uri}&{EUtilsConstants.SkipParameter}={retStart}&{EUtilsConstants.TopParameter}={retMax}");
 
             result.EnsureSuccessStatusCode();
 
@@ -141,12 +145,11 @@ public class EUtilsSearchService : IPubMedSearchService
             var contentString = await result.Content.ReadAsStringAsync();
             var fetchResult = XmlDeserializer<EFetchResult>.DeserializeXml(contentString);
 
-            if (fetchResult != null)
+            if (fetchResult == null) continue;
+
+            foreach (var article in fetchResult.PubmedArticles)
             {
-                foreach (var article in fetchResult.PubmedArticles)
-                {
-                    results.Add(article.MedlineCitation.Id, article);
-                }
+                results.Add(article.MedlineCitation.Id, article);
             }
         }
 
@@ -166,7 +169,7 @@ public class EUtilsSearchService : IPubMedSearchService
 
         foreach (var id in ids)
         {
-            var uri = $"{baseUri}&{EUtilsConstants.IdParameter}={id}&retmode=text&rettype=abstract";
+            var uri = $"{baseUri}&{EUtilsConstants.IdParameter}={id}&{EUtilsConstants.ReturnFormatParameter}=text&{EUtilsConstants.ReturnTypeParameter}=abstract";
             var result = await _httpClient.GetAsync(uri);
 
             result.EnsureSuccessStatusCode();

@@ -15,7 +15,7 @@ public class PubMedClientTests
     public void ConstructorSucceeds()
     {
         Assert.IsNotNull(new PubMedClient(NullLogger<PubMedClient>.Instance,
-            GivenIHaveAPubMedSearchServiceMock(new List<Article>()).Object,
+            GivenIHaveAPubMedSearchServiceMock([]).Object,
             GivenIHaveAnImpactScoringServiceMock().Object,
             GivenIHaveOutputServiceMock().Object));
     }
@@ -33,7 +33,7 @@ public class PubMedClientTests
         var client = new PubMedClient(NullLogger<PubMedClient>.Instance, searchServiceMock.Object,
             scoringServiceMock.Object, GivenIHaveOutputServiceMock().Object);
 
-        var result = await client.FindArticles(new ArticleFilter());
+        var result = await client.FindArticles([new ArticleFilter()]);
 
         Assert.IsNotNull(result);
         Assert.AreEqual(articlesToReturn.Count, result.Count);
@@ -50,7 +50,7 @@ public class PubMedClientTests
         var client = new PubMedClient(NullLogger<PubMedClient>.Instance, searchServiceMock.Object,
             scoringServiceMock.Object, GivenIHaveOutputServiceMock().Object);
 
-        _ = await client.FindArticles(new ArticleFilter());
+        _ = await client.FindArticles([new ArticleFilter()]);
 
         searchServiceMock.Verify(s => s.FindArticles(It.IsAny<ArticleFilter>()), Times.Once);   //called once per filter
         scoringServiceMock.Verify(s => s.GetImpactScore(It.IsAny<Article>()), Times.Exactly(articlesToReturn.Count));  //called once per article returned
@@ -67,7 +67,7 @@ public class PubMedClientTests
         var client = new PubMedClient(NullLogger<PubMedClient>.Instance, searchServiceMock.Object,
             scoringServiceMock.Object, GivenIHaveOutputServiceMock().Object);
 
-        var result = await client.FindArticles(new ArticleFilter());
+        var result = await client.FindArticles([new ArticleFilter()]);
 
         Assert.IsNotNull(result);
         Assert.AreEqual(1, result.Count);
@@ -82,11 +82,11 @@ public class PubMedClientTests
     {
         var outputServiceMock = GivenIHaveOutputServiceMock();
         var client = new PubMedClient(NullLogger<PubMedClient>.Instance,
-            GivenIHaveAPubMedSearchServiceMock(new List<Article>()).Object,
+            GivenIHaveAPubMedSearchServiceMock([]).Object,
             GivenIHaveAnImpactScoringServiceMock().Object,
             outputServiceMock.Object);
 
-        await client.GenerateContent(new List<Article>());
+        await client.GenerateContent([]);
 
         outputServiceMock.Verify(o => o.GenerateArticleList(It.IsAny<List<Article>>()), Times.Once);
     }
@@ -104,12 +104,12 @@ public class PubMedClientTests
         return mock;
     }
 
-    private Mock<IImpactScoringService> GivenIHaveAnImpactScoringServiceMock()
+    private static Mock<IImpactScoringService> GivenIHaveAnImpactScoringServiceMock()
     {
         return new Mock<IImpactScoringService>();
     }
 
-    private Mock<IOutputService> GivenIHaveOutputServiceMock()
+    private static Mock<IOutputService> GivenIHaveOutputServiceMock()
     {
         return new Mock<IOutputService>();
     }

@@ -1,6 +1,5 @@
 ﻿using PubMed.Study.Buddy.Domains.Search.EUtils.Models;
 using PubMed.Study.Buddy.DTOs;
-using System.Globalization;
 using Author = PubMed.Study.Buddy.DTOs.Author;
 
 namespace PubMed.Study.Buddy.Domains.Search.EUtils;
@@ -27,29 +26,33 @@ internal static class Utilities
 
         // Journal parameters
         var journalParams = filter.Journal?.Where(j => !string.IsNullOrEmpty(j))
-            .Select(j => $"{Uri.EscapeDataString(j)}[{EUtilsConstants.JournalField}]") ?? Enumerable.Empty<string>();
-        if (journalParams.Any())
+            .Select(j => $"{Uri.EscapeDataString(j)}[{EUtilsConstants.JournalField}]").ToList() ?? [];
+        if (journalParams.Count > 0)
             termParams.Add($"({string.Join("+OR+", journalParams)})");
 
         // MeSH terms parameters
         // I cannot for the life of me figure out why some mesh terms are listed as majors, some as minors, and some just as terms, so we're searching for any of them
         if (filter.MeshTerm != null)
         {
+            //outer list is ANDed together
             foreach (var orList in filter.MeshTerm)
             {
                 var orTerms = new List<string>();
+                //inner list is ORed together
+                // ReSharper disable once ForeachCanBeConvertedToQueryUsingAnotherGetEnumerator
                 foreach (var term in orList)
                 {
-                    orTerms.Add(string.Join("+OR+", $"{term}[{EUtilsConstants.MeshField}]",
-                        $"{term}[{EUtilsConstants.MeshMajorTopicField}]",
-                        $"{term}[{EUtilsConstants.MeshSubheadingField}]"));
+                    var escapedTerm = Uri.EscapeDataString(term);
+                    orTerms.Add(string.Join("+OR+", $"{escapedTerm}[{EUtilsConstants.MeshField}]",
+                        $"{escapedTerm}[{EUtilsConstants.MeshMajorTopicField}]",
+                        $"{escapedTerm}[{EUtilsConstants.MeshSubheadingField}]"));
                 }
                 termParams.Add($"({string.Join("+OR+", orTerms)})");
             }
         }
 
         // Put together the journal & MeSH params into the single term query parameter
-        if (termParams.Any())
+        if (termParams.Count > 0)
             queryParams.Add($"{EUtilsConstants.TermParameter}={string.Join("+AND+", termParams)}");
 
         return string.Join("&", queryParams);
@@ -72,14 +75,14 @@ internal static class Utilities
 
         if (medlineArticle.AuthorList is { Authors.Count: > 0 })
         {
-            article.AuthorList = new List<Author>();
+            article.AuthorList = [];
             for (var i = 0; i < medlineArticle.AuthorList.Authors.Count; i++)
             {
                 var author = medlineArticle.AuthorList.Authors[i];
 
                 article.AuthorList.Add(new Author
                 {
-                    First = (i == 0), //we should get back the "first" author first from the pubmed xml
+                    First = i == 0, //we should get back the "first" author first from the pubmed xml
                     FirstName = author.ForeName,
                     LastName = author.LastName,
                     Initials = author.Initials
@@ -100,8 +103,7 @@ internal static class Utilities
 
                 var date = medlineArticle.Journal.JournalIssue.PubDate;
                 if (date != null &&
-                    DateTime.TryParseExact($"01/{date.Month}/{date.Year}", new[] { "DD/MM/YYYY", "DD/MM/YY" },
-                        new CultureInfo("en-US"), DateTimeStyles.None, out var pubDate))
+                    DateTime.TryParse($"{date.Year}-{date.Month}-01", out var pubDate))
                     article.Publication.JournalDate = pubDate;
             }
         }
@@ -141,16 +143,13 @@ internal static class Utilities
             if (minorMeshHeading.Count > 0) article.MinorTopicMeshHeadings = minorMeshHeading;
         }
 
-        if (linkResponse.LinkSet.LinkSetDb is { Links.Count: > 0 })
-        {
-            article.CitedBy = new List<string>();
-            foreach (var link in linkResponse.LinkSet.LinkSetDb.Links)
-            {
-                article.CitedBy.Add(link.Id);
-            }
-        }
+        if (linkResponse.LinkSet.LinkSetDb is not { Links.Count: > 0 }) return article;
 
-        //todo get abstract
+        article.CitedBy = [];
+        foreach (var link in linkResponse.LinkSet.LinkSetDb.Links)
+        {
+            article.CitedBy.Add(link.Id);
+        }
 
         return article;
     }
@@ -168,14 +167,9 @@ internal static class Utilities
 
     private static DateTime? GetPublishedDateFromPubmedHistory(PubmedArticle pubmedArticle)
     {
-        PubMedPubDate? date = null;
         //get the date for the history status of "pubmed"
-        foreach (var hx in pubmedArticle.PubmedData.History.PubMedPubDates)
-        {
-            if (!string.Equals("pubmed", hx.PubStatus)) continue;
-            date = hx;
-            break;
-        }
+        var date = pubmedArticle.PubmedData.History.PubMedPubDates.FirstOrDefault(hx => string.Equals(EUtilsConstants.PublishedHxStatusIdentifier, hx.PubStatus));
+
         if (date == null) return null;
 
         if (DateTime.TryParse($"{date.Year}-{date.Month}-{date.Day}", out var pubDate))

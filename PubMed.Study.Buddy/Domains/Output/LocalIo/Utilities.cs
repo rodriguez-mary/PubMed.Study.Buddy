@@ -1,5 +1,5 @@
-﻿using System.Runtime.CompilerServices;
-using PubMed.Study.Buddy.DTOs;
+﻿using PubMed.Study.Buddy.DTOs;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 [assembly: InternalsVisibleTo("PubMed.Study.Buddy.Tests")]
@@ -35,7 +35,7 @@ internal static class Utilities
     {
         if (article.AuthorList == null || article.AuthorList.Count == 0) return string.Empty;
 
-        //there should only every be one first..
+        //there should only every be one first
         var firstAuthor = article.AuthorList.FirstOrDefault(author => author is { First: true }, null);
         return firstAuthor == null ? string.Empty : $"{firstAuthor.LastName},{firstAuthor.FirstName}";
     }

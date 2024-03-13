@@ -1,6 +1,4 @@
-﻿using Castle.Components.DictionaryAdapter.Xml;
-using Newtonsoft.Json.Linq;
-using PubMed.Study.Buddy.Domains.Output.LocalIo;
+﻿using PubMed.Study.Buddy.Domains.Output.LocalIo;
 using PubMed.Study.Buddy.DTOs;
 
 namespace PubMed.Study.Buddy.Tests.Domains.Output.LocalIo;
@@ -11,7 +9,7 @@ public class UtilitiesTests
     [TestMethod]
     public void CreateCsvString_EmptyListSucceeds()
     {
-        var csv = Utilities.CreateCsvString(new List<Article>());
+        var csv = Utilities.CreateCsvString([]);
         Assert.IsNotNull(csv);
         var expectedCsv =
             "id,impact score,title,first author,publication date,journal,major topics,cited count,abstract,PubMed link" + Environment.NewLine;
@@ -49,7 +47,7 @@ public class UtilitiesTests
             Abstract = abs
         };
 
-        var csv = Utilities.CreateCsvString(new List<Article> { article });
+        var csv = Utilities.CreateCsvString([article]);
 
         var expectedCsv =
             "id,impact score,title,first author,publication date,journal,major topics,cited count,abstract,PubMed link" +

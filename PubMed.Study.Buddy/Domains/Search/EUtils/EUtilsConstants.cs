@@ -34,4 +34,14 @@ internal class EUtilsConstants
     public const string StartDateParameter = "mindate";
     public const string EndDateParameter = "maxdate";
     public const string TermParameter = "term";
+    public const string TopParameter = "retmax";
+    public const string SkipParameter = "retstart";
+
+    // fetch endpoint parameters
+
+    public const string ReturnFormatParameter = "retmode";
+    public const string ReturnTypeParameter = "rettype";
+
+    // pubmed data constants
+    public const string PublishedHxStatusIdentifier = "pubmed";
 }

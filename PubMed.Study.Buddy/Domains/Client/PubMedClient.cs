@@ -6,7 +6,7 @@ using PubMed.Study.Buddy.DTOs;
 
 namespace PubMed.Study.Buddy.Domains.Client;
 
-public class PubMedClient(ILogger<PubMedClient> _, IPubMedSearchService searchService,
+public class PubMedClient(ILogger<PubMedClient> logger, IPubMedSearchService searchService,
     IImpactScoringService impactScoringService, IOutputService outputService) : IPubMedClient
 {
     public async Task<List<Article>> FindArticles(List<ArticleFilter> filters)
@@ -36,12 +36,9 @@ public class PubMedClient(ILogger<PubMedClient> _, IPubMedSearchService searchSe
             articleIds.Add(article.Id);
         }
 
-        return articles;
-    }
+        logger.LogInformation("{articleCount} articles found", articles.Count);
 
-    public async Task<List<Article>> FindArticles(ArticleFilter filter)
-    {
-        return await FindArticles(new List<ArticleFilter> { filter });
+        return articles;
     }
 
     public async Task GenerateContent(List<Article> articles)

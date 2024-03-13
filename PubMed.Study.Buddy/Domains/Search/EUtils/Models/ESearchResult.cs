@@ -16,7 +16,7 @@ public class ESearchResult
 
     [XmlArray("IdList")]
     [XmlArrayItem("Id")]
-    public List<string> IdList { get; set; } = new();
+    public List<string> IdList { get; set; } = [];
 
     [XmlElement(ElementName = "ErrorList")]
     public ErrorList? ErrorList { get; set; }

@@ -12,6 +12,8 @@ using PubMed.Study.Buddy.Domains.Search;
 using PubMed.Study.Buddy.Domains.Search.EUtils;
 using PubMed.Study.Buddy.DTOs;
 
+// ReSharper disable StringLiteralTypo
+
 var builder = Host.CreateApplicationBuilder(args);
 
 // Set up the demo project to read form secrets and appsettings files
@@ -35,25 +37,25 @@ builder.Services.AddSingleton<IPubMedClient, PubMedClient>();
 var serviceProvider = builder.Services.BuildServiceProvider();
 var pubMedClient = serviceProvider.GetRequiredService<IPubMedClient>();
 
-var vetSurgMeshTerms = new List<List<string>> { new() { "veterinary" }, new() { "surgery" }, new() { "dogs", "cats" } };
+var vetSurgeryMeshTerms = new List<List<string>> { new() { "veterinary" }, new() { "surgery" }, new() { "dogs", "cats" } };
 
 var threeYearArticles = new ArticleFilter
 {
     EndYear = 2024,
     StartYear = 2021,
-    MeshTerm = vetSurgMeshTerms,
-    Journal = new List<string> { "J Feline Med Surg", "J Vet Emerg Crit Care (San Antonio)", "J Vet Intern Med", "Vet Radiol Ultrasound" }
+    MeshTerm = vetSurgeryMeshTerms,
+    Journal = ["J Feline Med Surg", "J Vet Emerg Crit Care (San Antonio)", "J Vet Intern Med", "Vet Radiol Ultrasound"]
 };
 
 var fiveYearArticles = new ArticleFilter
 {
     EndYear = 2024,
     StartYear = 2019,
-    MeshTerm = vetSurgMeshTerms,
-    Journal = new List<string> { "J Am Vet Med Assoc", "J Small Anim Pract", "Vet Comp Orthop Traumatol", "Vet Surg" }
+    MeshTerm = vetSurgeryMeshTerms,
+    Journal = ["J Am Vet Med Assoc", "J Small Anim Pract", "Vet Comp Orthop Traumatol", "Vet Surg"]
 };
 
-var articles = await pubMedClient.FindArticles(new List<ArticleFilter> { threeYearArticles, fiveYearArticles });
+var articles = await pubMedClient.FindArticles([threeYearArticles, fiveYearArticles]);
 
 await pubMedClient.GenerateContent(articles);
 

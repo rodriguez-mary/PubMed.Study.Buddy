@@ -6,7 +6,7 @@ namespace PubMed.Study.Buddy.Domains.Search.EUtils.Models;
 public class EFetchResult
 {
     [XmlElement(ElementName = "PubmedArticle")]
-    public List<PubmedArticle> PubmedArticles { get; set; } = new();
+    public List<PubmedArticle> PubmedArticles { get; set; } = [];
 }
 
 public class PubmedArticle
@@ -23,6 +23,7 @@ public class MedlineCitation
     [XmlElement(ElementName = "MeshHeadingList")]
     public MeshHeadingList? MeshHeadingList { get; set; }
 
+    // ReSharper disable once StringLiteralTypo
     [XmlElement(ElementName = "PMID")]
     public string Id { get; set; } = string.Empty;
 }
@@ -35,7 +36,7 @@ public class PubmedData
 public class PubMedHistory
 {
     [XmlElement(ElementName = "PubMedPubDate")]
-    public List<PubMedPubDate> PubMedPubDates { get; set; } = new();
+    public List<PubMedPubDate> PubMedPubDates { get; set; } = [];
 }
 
 public class PubMedPubDate
@@ -80,7 +81,7 @@ public class PubDate
 
 public class AuthorList
 {
-    [XmlElement(ElementName = "Author")] public List<Author> Authors { get; set; } = new();
+    [XmlElement(ElementName = "Author")] public List<Author> Authors { get; set; } = [];
 }
 
 public class Author
@@ -100,7 +101,7 @@ public class ArticleDate
 public class MeshHeadingList
 {
     [XmlElement(ElementName = "MeshHeading")]
-    public List<MeshHeading> MeshHeadings { get; set; } = new();
+    public List<MeshHeading> MeshHeadings { get; set; } = [];
 }
 
 public class MeshHeading

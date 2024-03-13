@@ -1,6 +1,6 @@
-﻿using System.Xml;
+﻿using PubMed.Study.Buddy.Domains.Search.Exceptions;
+using System.Xml;
 using System.Xml.Serialization;
-using PubMed.Study.Buddy.Domains.Search.Exceptions;
 
 namespace PubMed.Study.Buddy.Domains.Search;
 
