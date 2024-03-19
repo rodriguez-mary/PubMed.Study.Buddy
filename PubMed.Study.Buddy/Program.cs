@@ -5,7 +5,6 @@ using Newtonsoft.Json;
 using Polly;
 using Polly.Extensions.Http;
 using PubMed.Study.Buddy.Domains.Client;
-using PubMed.Study.Buddy.Domains.Cluster.Hierarchical;
 using PubMed.Study.Buddy.Domains.Cluster.Jaccard;
 using PubMed.Study.Buddy.Domains.ImpactScoring;
 using PubMed.Study.Buddy.Domains.ImpactScoring.CitationNumber;
@@ -47,8 +46,8 @@ var articles = File.Exists(filename) ? await LoadArticlesFromFile(filename) : aw
 
 //await pubMedClient.GenerateArticleDataFile(articles);
 
-var clustering = new JaccardSimilarityClusterService(articles);
-clustering.GetClusters();
+var clustering = new JaccardSimilarityClusterService();
+clustering.GetClusters(articles);
 
 return;
 
