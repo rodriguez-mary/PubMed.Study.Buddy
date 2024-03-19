@@ -6,5 +6,5 @@ public interface IPubMedClient
 {
     Task<List<Article>> FindArticles(List<ArticleFilter> filter);
 
-    Task GenerateContent(List<Article> articles);
+    Task GenerateArticleDataFile(List<Article> articles);
 }

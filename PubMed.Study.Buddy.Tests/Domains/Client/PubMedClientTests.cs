@@ -86,9 +86,9 @@ public class PubMedClientTests
             GivenIHaveAnImpactScoringServiceMock().Object,
             outputServiceMock.Object);
 
-        await client.GenerateContent([]);
+        await client.GenerateArticleDataFile([]);
 
-        outputServiceMock.Verify(o => o.GenerateArticleList(It.IsAny<List<Article>>()), Times.Once);
+        outputServiceMock.Verify(o => o.GenerateArticleDataFile(It.IsAny<List<Article>>()), Times.Once);
     }
 
     #endregion GenerateContent

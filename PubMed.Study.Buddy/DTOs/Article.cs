@@ -2,6 +2,7 @@
 
 namespace PubMed.Study.Buddy.DTOs;
 
+[Serializable]
 public class Article
 {
     public string Id { get; set; } = string.Empty;

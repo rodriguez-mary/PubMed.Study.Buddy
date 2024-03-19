@@ -41,8 +41,8 @@ public class PubMedClient(ILogger<PubMedClient> logger, IPubMedSearchService sea
         return articles;
     }
 
-    public async Task GenerateContent(List<Article> articles)
+    public async Task GenerateArticleDataFile(List<Article> articles)
     {
-        await outputService.GenerateArticleList(articles);
+        await outputService.GenerateArticleDataFile(articles);
     }
 }

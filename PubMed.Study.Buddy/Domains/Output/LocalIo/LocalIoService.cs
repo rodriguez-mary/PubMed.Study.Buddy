@@ -11,7 +11,7 @@ public class LocalIoService(ILogger<LocalIoService> logger, IConfiguration confi
 
     private readonly string _fileDirectory = config["localIoDirectory"] ?? Environment.CurrentDirectory;
 
-    public Task GenerateArticleList(List<Article> articles)
+    public Task GenerateArticleDataFile(List<Article> articles)
     {
         var filePath = Path.Combine(_fileDirectory, $"{_articleListCsvFileName}.csv");
         File.WriteAllText(filePath, Utilities.CreateCsvString(articles));

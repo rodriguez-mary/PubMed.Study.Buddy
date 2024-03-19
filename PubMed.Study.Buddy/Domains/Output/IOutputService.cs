@@ -4,5 +4,5 @@ namespace PubMed.Study.Buddy.Domains.Output;
 
 public interface IOutputService
 {
-    Task GenerateArticleList(List<Article> articles);
+    Task GenerateArticleDataFile(List<Article> articles);
 }
