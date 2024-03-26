@@ -17,8 +17,8 @@ public class Article
 
     public List<Author>? AuthorList { get; set; }
 
-    public List<string>? MajorTopicMeshHeadings { get; set; }
-    public List<string>? MinorTopicMeshHeadings { get; set; }
+    public List<MeshTerm>? MajorTopicMeshHeadings { get; set; }
+    public List<MeshTerm>? MinorTopicMeshHeadings { get; set; }
 
     public Publication? Publication { get; set; }
 

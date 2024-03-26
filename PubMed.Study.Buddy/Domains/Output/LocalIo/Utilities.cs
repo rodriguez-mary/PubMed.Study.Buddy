@@ -22,7 +22,7 @@ internal static class Utilities
                 $"\"{GetFirstAuthorLastFirstName(article).Replace("\"", "'")}\"," +
                 $"{article.PublicationDate.ToString("yyyy-MM-dd")}," +
                 $"\"{article.Publication?.JournalName.Replace("\"", "'") ?? string.Empty}\"," +
-                $"\"{(article.MajorTopicMeshHeadings != null ? string.Join(",", article.MajorTopicMeshHeadings) : string.Empty)}\"," +
+                $"\"{(article.MajorTopicMeshHeadings != null ? string.Join(",", article.MajorTopicMeshHeadings.Select(m => m.DescriptorName)) : string.Empty)}\"," +
                 $"{(article.CitedBy == null ? "0" : article.CitedBy.Count)}," +
                 $"\"{article.Abstract.Replace("\"", "'")}\"," +  //double quote for break lines
                 $"\"{article.PubMedUrl}\"");

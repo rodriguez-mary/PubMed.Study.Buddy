@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 using Polly;
 using Polly.Extensions.Http;
 using PubMed.Study.Buddy.Domains.Client;
-using PubMed.Study.Buddy.Domains.Cluster.Jaccard;
+using PubMed.Study.Buddy.Domains.Cluster.Hierarchical;
 using PubMed.Study.Buddy.Domains.ImpactScoring;
 using PubMed.Study.Buddy.Domains.ImpactScoring.CitationNumber;
 using PubMed.Study.Buddy.Domains.Output;
@@ -43,10 +43,16 @@ var pubMedClient = serviceProvider.GetRequiredService<IPubMedClient>();
 
 var filename = Path.Combine(@"c:\temp\studybuddy", "articles.json");
 var articles = File.Exists(filename) ? await LoadArticlesFromFile(filename) : await LoadFromPubMed(pubMedClient, filename);
-
 //await pubMedClient.GenerateArticleDataFile(articles);
 
-var clustering = new JaccardSimilarityClusterService();
+var meshTerms = new Dictionary<string, MeshTerm>();
+foreach (var meshHeading in articles.Where(article => article.MajorTopicMeshHeadings != null).SelectMany(article => article.MajorTopicMeshHeadings!))
+{
+    meshTerms.TryAdd(meshHeading.DescriptorId, meshHeading);
+}
+
+var clustering = new HierarchicalClusteringService(meshTerms);
+clustering.Initialize();
 clustering.GetClusters(articles);
 
 return;

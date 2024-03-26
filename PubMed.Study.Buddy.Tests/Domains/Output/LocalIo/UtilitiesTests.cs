@@ -42,7 +42,7 @@ public class UtilitiesTests
             AuthorList = new List<Author> { new() { First = true, LastName = lName, FirstName = fName } },
             PublicationDate = new DateTime(year, month, day),
             Publication = new Publication { JournalName = jName },
-            MajorTopicMeshHeadings = new List<string> { majTopic1, majTopic2 },
+            MajorTopicMeshHeadings = new List<MeshTerm> { new() { DescriptorName = majTopic1 }, new() { DescriptorName = majTopic2 } },
             CitedBy = citedBy,
             Abstract = abs
         };

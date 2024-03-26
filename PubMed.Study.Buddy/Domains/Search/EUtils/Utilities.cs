@@ -4,7 +4,7 @@ using Author = PubMed.Study.Buddy.DTOs.Author;
 
 namespace PubMed.Study.Buddy.Domains.Search.EUtils;
 
-internal static class Utilities
+internal class Utilities(IReadOnlyDictionary<string, MeshTerm> meshTerms)
 {
     /// <summary>
     /// Create a query string for the eSearch PubMed utility from an article filter.
@@ -58,7 +58,7 @@ internal static class Utilities
         return string.Join("&", queryParams);
     }
 
-    public static Article CompileArticleFromResponses(string id, PubmedArticle pubMedArticle, ELinkResult linkResponse, string articleAbstract)
+    public Article CompileArticleFromResponses(string id, PubmedArticle pubMedArticle, ELinkResult linkResponse, string articleAbstract)
     {
         var article = new Article
         {
@@ -110,15 +110,18 @@ internal static class Utilities
 
         if (medlineCitation.MeshHeadingList is { MeshHeadings.Count: > 0 })
         {
-            var majorMeshHeading = new List<string>();
-            var minorMeshHeading = new List<string>();
+            var majorMeshHeading = new List<MeshTerm>();
+            var minorMeshHeading = new List<MeshTerm>();
 
             foreach (var meshHeading in medlineCitation.MeshHeadingList.MeshHeadings)
             {
                 if (meshHeading.DescriptorName == null) continue;
+                if (!meshTerms.TryGetValue(meshHeading.DescriptorName.Id, out var meshTerm)) continue;
 
                 if (string.Equals(meshHeading.DescriptorName.MajorTopicYn, "Y"))
-                    majorMeshHeading.Add(meshHeading.DescriptorName.Name);
+                {
+                    majorMeshHeading.Add(meshTerm);
+                }
                 else
                 {
                     //if the descriptor isn't flagged as major topic, check the qualifiers
@@ -128,13 +131,17 @@ internal static class Utilities
                         var major = meshHeading.QualifierNames.Any(qualifierName => string.Equals(qualifierName.MajorTopicYn, "Y"));
 
                         if (major)
-                            majorMeshHeading.Add(meshHeading.DescriptorName.Name);
+                        {
+                            majorMeshHeading.Add(meshTerm);
+                        }
                         else
-                            minorMeshHeading.Add(meshHeading.DescriptorName.Name);
+                        {
+                            minorMeshHeading.Add(meshTerm);
+                        }
                     }
                     else
                     {
-                        minorMeshHeading.Add(meshHeading.DescriptorName.Name);
+                        minorMeshHeading.Add(meshTerm);
                     }
                 }
             }

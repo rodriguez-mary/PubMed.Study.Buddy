@@ -23,7 +23,7 @@ public class JaccardSimilarityClusterService : IClusterService
                 if (similarity == 1)
                 {
                     article1.MajorTopicMeshHeadings.Sort();
-                    var key = string.Join(";", article1.MajorTopicMeshHeadings.Select(s => s.Replace(",", "")));
+                    var key = string.Join(";", article1.MajorTopicMeshHeadings.Select(s => s.DescriptorId));
                     if (!similarityDict.ContainsKey(key))
                         similarityDict.Add(key, new List<string>());
                     similarityDict[key].AddRange([article1.Id, article2.Id]);
@@ -56,18 +56,20 @@ public class JaccardSimilarityClusterService : IClusterService
     }
 
     // Function to calculate Jaccard Similarity between two arrays of doubles
-    private static double CalculateJaccardSimilarity(List<string> set1, List<string> set2)
+    private static double CalculateJaccardSimilarity(List<MeshTerm>? set1, List<MeshTerm>? set2)
     {
+        if (set1 == null || set2 == null) return 0;
+
         // Convert lists to sets
-        HashSet<string> set1HashSet = new HashSet<string>(set1);
-        HashSet<string> set2HashSet = new HashSet<string>(set2);
+        var set1HashSet = new HashSet<string>(set1.Select(s => s.DescriptorId));
+        var set2HashSet = new HashSet<string>(set2.Select(s => s.DescriptorId));
 
         // Calculate intersection and union sizes
-        int intersectionSize = set1HashSet.Intersect(set2HashSet).Count();
-        int unionSize = set1HashSet.Union(set2HashSet).Count();
+        var intersectionSize = set1HashSet.Intersect(set2HashSet).Count();
+        var unionSize = set1HashSet.Union(set2HashSet).Count();
 
         // Calculate Jaccard Index
-        double jaccardIndex = (double)intersectionSize / unionSize;
+        var jaccardIndex = (double)intersectionSize / unionSize;
         return jaccardIndex;
     }
 }

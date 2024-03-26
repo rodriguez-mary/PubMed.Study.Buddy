@@ -32,6 +32,9 @@ public class EUtilsSearchService : IPubMedSearchService
         //todo validate year input
         var articleIds = await GetArticleIds(filter);
 
+        var meshTerms = await LoadMeshTerms();
+        var utilities = new Utilities(meshTerms);
+
         var citationCounts = await GetArticleCitationData(articleIds);
         var articleMetadata = await GetArticleMetadata(articleIds);
         var articleAbstracts = await GetArticleAbstract(articleIds);
@@ -42,10 +45,45 @@ public class EUtilsSearchService : IPubMedSearchService
             if (!citationCounts.TryGetValue(id, out var linkData)) linkData = new ELinkResult();
             if (!articleAbstracts.TryGetValue(id, out var articleAbstract)) articleAbstract = string.Empty;
 
-            articles.Add(Utilities.CompileArticleFromResponses(id, fetchData, linkData, articleAbstract));
+            articles.Add(utilities.CompileArticleFromResponses(id, fetchData, linkData, articleAbstract));
         }
 
         return articles;
+    }
+
+    private async Task<Dictionary<string, MeshTerm>> LoadMeshTerms()
+    {
+        var meshTerms = new Dictionary<string, MeshTerm>();
+        const string uri = "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2024.xml";
+        var result = await _httpClient.GetAsync(uri);
+
+        result.EnsureSuccessStatusCode();
+
+        var contentString = await result.Content.ReadAsStringAsync();
+
+        try
+        {
+            var meshTermResult = XmlDeserializer<MeshTermResult>.DeserializeXml(contentString);
+
+            if (meshTermResult != null)
+            {
+                foreach (var descriptorRecord in meshTermResult.DescriptorRecords)
+                {
+                    meshTerms.Add(descriptorRecord.DescriptorId, new MeshTerm
+                    {
+                        DescriptorId = descriptorRecord.DescriptorId,
+                        DescriptorName = descriptorRecord.DescriptorName.String,
+                        TreeNumber = descriptorRecord.TreeNumberList.TreeNumber
+                    });
+                }
+            }
+        }
+        catch (InvalidPubMedDataException)
+        {
+            _logger.LogError("Invalid xml in search request for URI {uri}.", uri);
+        }
+
+        return meshTerms;
     }
 
     //get list of article IDs

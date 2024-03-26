@@ -155,6 +155,9 @@ public class DescriptorName
     [XmlAttribute(AttributeName = "MajorTopicYN")]
     public string MajorTopicYn { get; set; } = "N";
 
+    [XmlAttribute(AttributeName = "UI")]
+    public string Id { get; set; } = string.Empty;
+
     [XmlText]
     public string Name { get; set; } = string.Empty;
 }
@@ -163,6 +166,9 @@ public class QualifierName
 {
     [XmlAttribute(AttributeName = "MajorTopicYN")]
     public string MajorTopicYn { get; set; } = "N";
+
+    [XmlAttribute(AttributeName = "UI")]
+    public string Id { get; set; } = string.Empty;
 
     [XmlText]
     public string Name { get; set; } = string.Empty;

@@ -136,7 +136,8 @@ public class UtilitiesTests
     public void CompileArticleFromResponses_IdIsMapped()
     {
         const string id = "article_id";
-        var article = Utilities.CompileArticleFromResponses(id, new PubmedArticle(), new ELinkResult(), string.Empty);
+        var utilities = new Utilities(new Dictionary<string, MeshTerm>());
+        var article = utilities.CompileArticleFromResponses(id, new PubmedArticle(), new ELinkResult(), string.Empty);
 
         Assert.IsNotNull(article);
         Assert.AreEqual(id, article.Id);
@@ -146,7 +147,9 @@ public class UtilitiesTests
     public void CompileArticleFromResponses_AbstractIsMapped()
     {
         const string articleAbstract = "article_abstract";
-        var article = Utilities.CompileArticleFromResponses(string.Empty, new PubmedArticle(), new ELinkResult(), articleAbstract);
+
+        var utilities = new Utilities(new Dictionary<string, MeshTerm>());
+        var article = utilities.CompileArticleFromResponses(string.Empty, new PubmedArticle(), new ELinkResult(), articleAbstract);
 
         Assert.IsNotNull(article);
         Assert.AreEqual(articleAbstract, article.Abstract);
@@ -156,7 +159,8 @@ public class UtilitiesTests
     public void CompileArticleFromResponses_TitleIsMapped()
     {
         const string title = "article title";
-        var article = Utilities.CompileArticleFromResponses(string.Empty,
+        var utilities = new Utilities(new Dictionary<string, MeshTerm>());
+        var article = utilities.CompileArticleFromResponses(string.Empty,
             new PubmedArticle
             { MedlineCitation = new MedlineCitation { Article = new EFetchArticle { DynamicArticleTitle = title } } },
             new ELinkResult(), string.Empty);
@@ -173,7 +177,8 @@ public class UtilitiesTests
         const int day = 29;
         var expectedDate = new DateTime(year, month, day);
 
-        var article = Utilities.CompileArticleFromResponses(string.Empty,
+        var utilities = new Utilities(new Dictionary<string, MeshTerm>());
+        var article = utilities.CompileArticleFromResponses(string.Empty,
             new PubmedArticle
             {
                 MedlineCitation = new MedlineCitation
@@ -199,7 +204,8 @@ public class UtilitiesTests
         const int day = 29;
         var expectedDate = new DateTime(year, month, day);
 
-        var article = Utilities.CompileArticleFromResponses(string.Empty,
+        var utilities = new Utilities(new Dictionary<string, MeshTerm>());
+        var article = utilities.CompileArticleFromResponses(string.Empty,
             new PubmedArticle
             {
                 PubmedData = new PubmedData
@@ -234,7 +240,8 @@ public class UtilitiesTests
         var expectedDate = new DateTime(year, month, day);
         const int badYear = 1990;
 
-        var article = Utilities.CompileArticleFromResponses(string.Empty,
+        var utilities = new Utilities(new Dictionary<string, MeshTerm>());
+        var article = utilities.CompileArticleFromResponses(string.Empty,
             new PubmedArticle
             {
                 PubmedData = new PubmedData
@@ -275,7 +282,8 @@ public class UtilitiesTests
         const string badMonth = "bad month";
         const string badDay = "bad day";
 
-        var article = Utilities.CompileArticleFromResponses(string.Empty,
+        var utilities = new Utilities(new Dictionary<string, MeshTerm>());
+        var article = utilities.CompileArticleFromResponses(string.Empty,
             new PubmedArticle
             {
                 PubmedData = new PubmedData
@@ -316,7 +324,8 @@ public class UtilitiesTests
         const string authorLastName = "Smith";
         const string authorInitials = "mes";
 
-        var article = Utilities.CompileArticleFromResponses(string.Empty,
+        var utilities = new Utilities(new Dictionary<string, MeshTerm>());
+        var article = utilities.CompileArticleFromResponses(string.Empty,
             new PubmedArticle
             {
                 MedlineCitation = new MedlineCitation
@@ -356,7 +365,8 @@ public class UtilitiesTests
         const string firstAuthorSurname = "first author";
         const string secondAuthorSurname = "second author";
 
-        var article = Utilities.CompileArticleFromResponses(string.Empty,
+        var utilities = new Utilities(new Dictionary<string, MeshTerm>());
+        var article = utilities.CompileArticleFromResponses(string.Empty,
             new PubmedArticle
             {
                 MedlineCitation = new MedlineCitation
@@ -402,7 +412,8 @@ public class UtilitiesTests
 
         var expectedDate = new DateTime(journalYear, journalMonth, 1);
 
-        var article = Utilities.CompileArticleFromResponses(string.Empty,
+        var utilities = new Utilities(new Dictionary<string, MeshTerm>());
+        var article = utilities.CompileArticleFromResponses(string.Empty,
             new PubmedArticle
             {
                 MedlineCitation = new MedlineCitation
@@ -438,7 +449,8 @@ public class UtilitiesTests
         const string badMonth = "bad month";
         const string badYear = "bad year";
 
-        var article = Utilities.CompileArticleFromResponses(string.Empty,
+        var utilities = new Utilities(new Dictionary<string, MeshTerm>());
+        var article = utilities.CompileArticleFromResponses(string.Empty,
             new PubmedArticle
             {
                 MedlineCitation = new MedlineCitation
@@ -470,7 +482,8 @@ public class UtilitiesTests
         const string minorMeshTerm = "minor term";
         const string minorMeshTermWithQualifier = "minor with qualifier";
 
-        var article = Utilities.CompileArticleFromResponses(string.Empty,
+        var utilities = new Utilities(new Dictionary<string, MeshTerm>());
+        var article = utilities.CompileArticleFromResponses(string.Empty,
             new PubmedArticle
             {
                 MedlineCitation = new MedlineCitation
@@ -512,8 +525,9 @@ public class UtilitiesTests
         var minorTerms = article.MinorTopicMeshHeadings;
         Assert.IsNotNull(minorTerms);
         Assert.AreEqual(2, minorTerms.Count);
-        Assert.IsTrue(minorTerms.Contains(minorMeshTerm));
-        Assert.IsTrue(minorTerms.Contains(minorMeshTermWithQualifier));
+
+        Assert.AreEqual(1, minorTerms.Where(t => t.DescriptorName == minorMeshTerm).ToList().Count);
+        Assert.AreEqual(1, minorTerms.Where(t => t.DescriptorName == minorMeshTermWithQualifier).ToList().Count);
     }
 
     [TestMethod]
@@ -522,7 +536,8 @@ public class UtilitiesTests
         const string majorTermInDescriptor = "major descriptor term";
         const string majorTermInQualifier = "major qualifier term";
 
-        var article = Utilities.CompileArticleFromResponses(string.Empty,
+        var utilities = new Utilities(new Dictionary<string, MeshTerm>());
+        var article = utilities.CompileArticleFromResponses(string.Empty,
             new PubmedArticle
             {
                 MedlineCitation = new MedlineCitation
@@ -563,8 +578,8 @@ public class UtilitiesTests
         var majorTerms = article.MajorTopicMeshHeadings;
         Assert.IsNotNull(majorTerms);
         Assert.AreEqual(2, majorTerms.Count);
-        Assert.IsTrue(majorTerms.Contains(majorTermInDescriptor));
-        Assert.IsTrue(majorTerms.Contains(majorTermInQualifier));
+        Assert.AreEqual(1, majorTerms.Where(t => t.DescriptorName == majorTermInDescriptor).ToList().Count);
+        Assert.AreEqual(1, majorTerms.Where(t => t.DescriptorName == majorTermInQualifier).ToList().Count);
     }
 
     [TestMethod]
@@ -573,7 +588,8 @@ public class UtilitiesTests
         const string linkId1 = "link1";
         const string linkId2 = "link2";
 
-        var article = Utilities.CompileArticleFromResponses(string.Empty,
+        var utilities = new Utilities(new Dictionary<string, MeshTerm>());
+        var article = utilities.CompileArticleFromResponses(string.Empty,
             new PubmedArticle(),
             new ELinkResult
             {
