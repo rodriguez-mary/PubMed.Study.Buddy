@@ -30,7 +30,7 @@ public class HierarchicalClusteringService(Dictionary<string, MeshTerm> meshTerm
 
     public List<Models.Cluster> GetClusters(List<Article> baseArticles)
     {
-        var articles = GetArticles(baseArticles, new List<string>{  });
+        var articles = GetArticles(baseArticles, new List<string> { });
 
         var articleKeys = new Dictionary<string, int>();
         var index = 0;
@@ -118,11 +118,11 @@ public class HierarchicalClusteringService(Dictionary<string, MeshTerm> meshTerm
         }
 
         // we need to determine the minimum distance for every descriptor on that article
-        // to ANY descriptor on the other article 
+        // to ANY descriptor on the other article
         var distance = 0;
         foreach (var meshTermA in longList)
         {
-            // get the index for 
+            // get the index for
             if (!_matrixKeys.TryGetValue(meshTermA.DescriptorId, out var meshAIndex))
             {
                 distance += MaxDistance;
