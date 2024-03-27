@@ -1,4 +1,5 @@
 ﻿using PubMed.Study.Buddy.DTOs;
+using System.Text;
 
 namespace PubMed.Study.Buddy.Domains.Cluster.Hierarchical;
 
@@ -27,16 +28,125 @@ public class HierarchicalClusteringService(Dictionary<string, MeshTerm> meshTerm
         _distanceMatrix = CreateDistanceMatrix();
     }
 
-    public List<Models.Cluster> GetClusters(List<Article> articles)
+    public List<Models.Cluster> GetClusters(List<Article> baseArticles)
     {
-        throw new NotImplementedException();
+        var articles = GetArticles(baseArticles, new List<string>{  });
+
+        var articleKeys = new Dictionary<string, int>();
+        var index = 0;
+        foreach (var article in articles)
+        {
+            articleKeys[article.Id] = index;
+            index++;
+        }
+
+        var size = articles.Count;
+        var matrix = new int[size, size];
+
+        for (var i = 0; i < articles.Count; i++)
+        {
+            for (var j = i + 1; j < articles.Count; j++)
+            {
+                var distance = ArticleDistance(articles[i], articles[j]);
+                matrix[i, j] = distance;
+                matrix[j, i] = distance;
+            }
+        }
+
+        using var sw = new StreamWriter(@"c:\temp\studybuddy\agglomerative.csv", false, Encoding.UTF8);
+
+        var header = "";
+        for (var i = 0; i < articles.Count; i++)
+            header += $",{articles[i].Id}";
+
+        sw.WriteLine(header);
+
+        for (var i = 0; i < articles.Count; i++)
+        {
+            sw.Write($"{articles[i].Id}");
+            for (var j = 0; j < articles.Count; j++)
+            {
+                var x = matrix[i, j];
+                if (x < MaxDistance)
+                    sw.Write($",{x}");
+                else
+                    sw.Write(",");
+            }
+
+            sw.WriteLine();
+        }
+
+        return new List<Models.Cluster>();
     }
 
-    private static int ArticleDistance(Article article1, Article article2)
+    private List<Article> GetArticles(List<Article> baseArticles, List<string> ids)
     {
-        // for an article, we need to determine the minimum distance for every descriptor on that article
-        // to ANY descriptor on the other article
-        return 0;
+        if (ids.Count == 0) return baseArticles;
+
+        var articleLookup = new Dictionary<string, Article>();
+        foreach (var art in baseArticles)
+        {
+            articleLookup.Add(art.Id, art);
+        }
+
+        var articles = new List<Article>();
+        foreach (var id in ids)
+        {
+            articles.Add(articleLookup[id]);
+        }
+
+        return articles;
+    }
+
+    private int ArticleDistance(Article article1, Article article2)
+    {
+        var article1ListLength = article1.MajorTopicMeshHeadings?.Count ?? 0;
+        var article2ListLength = article2.MajorTopicMeshHeadings?.Count ?? 0;
+        if (article1ListLength == 0 || article2ListLength == 0) return MaxDistance;
+
+        List<MeshTerm> longList;
+        List<MeshTerm> shortList;
+        if (article1ListLength > article2ListLength)
+        {
+            longList = article1.MajorTopicMeshHeadings!;
+            shortList = article2.MajorTopicMeshHeadings!;
+        }
+        else
+        {
+            longList = article2.MajorTopicMeshHeadings!;
+            shortList = article1.MajorTopicMeshHeadings!;
+        }
+
+        // we need to determine the minimum distance for every descriptor on that article
+        // to ANY descriptor on the other article 
+        var distance = 0;
+        foreach (var meshTermA in longList)
+        {
+            // get the index for 
+            if (!_matrixKeys.TryGetValue(meshTermA.DescriptorId, out var meshAIndex))
+            {
+                distance += MaxDistance;
+                continue;
+            }
+
+            var minDistance = MaxDistance;
+            // get the minimum distance to any of the other descriptors
+            foreach (var meshTermB in shortList)
+            {
+                if (!_matrixKeys.TryGetValue(meshTermB.DescriptorId, out var meshBIndex))
+                    continue;
+
+                var thisDistance = _distanceMatrix[meshAIndex, meshBIndex];
+                if (thisDistance < minDistance) minDistance = thisDistance;
+
+                if (minDistance == 0) break;
+            }
+
+            // add that min distance to the total
+            distance += minDistance;
+        }
+
+        return distance;
     }
 
     /// <summary>
