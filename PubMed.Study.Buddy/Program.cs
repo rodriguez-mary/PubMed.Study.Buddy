@@ -52,7 +52,8 @@ foreach (var meshHeading in articles.Where(article => article.MajorTopicMeshHead
     meshTerms.TryAdd(meshHeading.DescriptorId, meshHeading);
 }
 
-var clustering = new AgglomerativeClusteringService();
+var clustering = new HierarchicalClusteringService(meshTerms);
+clustering.Initialize();
 clustering.GetClusters(articles);
 
 return;

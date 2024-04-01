@@ -10,7 +10,7 @@ public class HierarchicalClusteringService(Dictionary<string, MeshTerm> meshTerm
 
     //this is the distance we deem "too far" to cluster content
     //max distance should supersede min size--it's useless if we cluster very disparate things together
-    private const int MaxClusterDistance = 6;
+    private const int MaxClusterDistance = 3000;  //a max distance of 3k means we allow for two bizzaro mesh terms that don't ever match with anything
 
     private const int MaxDistance = 1000;
     private List<MeshTerm> _meshTermsList = [];
@@ -37,10 +37,20 @@ public class HierarchicalClusteringService(Dictionary<string, MeshTerm> meshTerm
 
     public List<Models.Cluster> GetClusters(List<Article> baseArticles)
     {
-        var articles = GetArticles(baseArticles, new List<string> { });
+        var articles = GetArticles(baseArticles, []);
 
         var matrix = GetArticleDistanceMatrix(articles);
-        return ClusterArticles(articles, matrix);
+        var clusters = ClusterArticles(articles, matrix);
+
+        using var sw = new StreamWriter(@"c:\temp\studybuddy\hierarchical.csv", false, Encoding.UTF8);
+        sw.WriteLine("article count,articles");
+        foreach (var cluster in clusters)
+        {
+            var a = cluster.Articles;
+            sw.WriteLine($"{a.Count},{string.Join(",", a)}");
+        }
+
+        return clusters;
     }
 
     private List<Models.Cluster> ClusterArticles(List<Article> articles, int[,] matrix)
@@ -53,21 +63,45 @@ public class HierarchicalClusteringService(Dictionary<string, MeshTerm> meshTerm
             index++;
         }
 
+        var clusterDict = new Dictionary<int, Models.Cluster>();
+        for (var i = 0; i < matrix.GetLength(0); i++)
+            clusterDict.Add(i, new Models.Cluster());
+
         //basically, we have our list of articles that need to be clustered (articleKeys)
         //we iteratively loop through all the articles and cluster them by increasing distances
         //if they meet the requirement of min size
         //then we pull them from the list that needs to be clustered
+        var colLength = matrix.GetLength(1);
+        var currentMaxDistance = 0;
+        while (currentMaxDistance <= MaxClusterDistance)
+        {
+            foreach (var (pos, cluster) in clusterDict)
+            {
+                if (cluster.Articles.Count >= MinClusterSize) continue;
 
-        return [];
+                for (var i = 0; i < colLength; i++)
+                {
+                    if (matrix[pos, i] == currentMaxDistance)  //== rather than <= to avoid adding the same article multiple times
+                    {
+                        cluster.Articles.Add(articles[i]);
+                    }
+                }
+            }
+
+            currentMaxDistance++;
+        }
+
+        return [.. clusterDict.Values];
     }
 
-    private int[,] GetArticleDistanceMatrix(List<Article> articles)
+    private int[,] GetArticleDistanceMatrix(IReadOnlyList<Article> articles)
     {
         var size = articles.Count;
         var matrix = new int[size, size];
 
         for (var i = 0; i < articles.Count; i++)
         {
+            matrix[i, i] = 0;
             for (var j = i + 1; j < articles.Count; j++)
             {
                 var distance = ArticleDistance(articles[i], articles[j]);
