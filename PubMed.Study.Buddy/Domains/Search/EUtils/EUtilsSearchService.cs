@@ -14,6 +14,8 @@ public class EUtilsSearchService : IPubMedSearchService
     private readonly HttpClient _httpClient;
     private readonly ILogger<EUtilsSearchService> _logger;
 
+    private Dictionary<string, MeshTerm>? _meshTerms;
+
     public EUtilsSearchService(ILogger<EUtilsSearchService> logger, IConfiguration configuration, HttpClient httpClient)
     {
         var eUtilsAddress = configuration["pubmedEUtilsAddress"] ?? DefaultEUtilsAddress;
@@ -27,13 +29,14 @@ public class EUtilsSearchService : IPubMedSearchService
 
     public async Task<List<Article>> FindArticles(ArticleFilter filter)
     {
-        var articles = new List<Article>();
-
         //todo validate year input
-        var articleIds = await GetArticleIds(filter);
+
+        var articles = new List<Article>();
 
         var meshTerms = await LoadMeshTerms();
         var utilities = new Utilities(meshTerms);
+
+        var articleIds = await GetArticleIds(utilities, filter);
 
         var citationCounts = await GetArticleCitationData(articleIds);
         var articleMetadata = await GetArticleMetadata(articleIds);
@@ -51,8 +54,15 @@ public class EUtilsSearchService : IPubMedSearchService
         return articles;
     }
 
+    public async Task<Dictionary<string, MeshTerm>> GetMeshTerms()
+    {
+        return await LoadMeshTerms();
+    }
+
     private async Task<Dictionary<string, MeshTerm>> LoadMeshTerms()
     {
+        if (_meshTerms != null) return _meshTerms;
+
         var meshTerms = new Dictionary<string, MeshTerm>();
         const string uri = "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2024.xml";
         var result = await _httpClient.GetAsync(uri);
@@ -83,13 +93,14 @@ public class EUtilsSearchService : IPubMedSearchService
             _logger.LogError("Invalid xml in search request for URI {uri}.", uri);
         }
 
+        _meshTerms = meshTerms;
         return meshTerms;
     }
 
     //get list of article IDs
-    private async Task<List<string>> GetArticleIds(ArticleFilter filter)
+    private async Task<List<string>> GetArticleIds(Utilities utilities, ArticleFilter filter)
     {
-        var uri = $"{EUtilsConstants.SearchEndpoint}?{Utilities.GetQueryFromArticleFilter(filter)}";
+        var uri = $"{EUtilsConstants.SearchEndpoint}?{utilities.GetQueryFromArticleFilter(filter)}";
         if (!string.IsNullOrEmpty(_apiKey))
             uri += $"&{EUtilsConstants.ApiKeyParameter}={_apiKey}";
 

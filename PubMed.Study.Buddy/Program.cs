@@ -5,7 +5,6 @@ using Newtonsoft.Json;
 using Polly;
 using Polly.Extensions.Http;
 using PubMed.Study.Buddy.Domains.Client;
-using PubMed.Study.Buddy.Domains.Cluster.Agglomerative;
 using PubMed.Study.Buddy.Domains.Cluster.Hierarchical;
 using PubMed.Study.Buddy.Domains.ImpactScoring;
 using PubMed.Study.Buddy.Domains.ImpactScoring.CitationNumber;
@@ -14,6 +13,8 @@ using PubMed.Study.Buddy.Domains.Output.LocalIo;
 using PubMed.Study.Buddy.Domains.Search;
 using PubMed.Study.Buddy.Domains.Search.EUtils;
 using PubMed.Study.Buddy.DTOs;
+
+#region register and init services
 
 // ReSharper disable StringLiteralTypo
 
@@ -39,21 +40,26 @@ builder.Services.AddSingleton<IPubMedClient, PubMedClient>();
 
 var serviceProvider = builder.Services.BuildServiceProvider();
 
-// Do the stuff
+#endregion register and init services
+
 var pubMedClient = serviceProvider.GetRequiredService<IPubMedClient>();
 
+// get the list of articles
 var filename = Path.Combine(@"c:\temp\studybuddy", "articles.json");
-var articles = File.Exists(filename) ? await LoadArticlesFromFile(filename) : await LoadFromPubMed(pubMedClient, filename);
-//await pubMedClient.GenerateArticleDataFile(articles);
+var vetSurgeryMeshTerms = new List<List<string>> { new() { "Q000662" }, new() { "D013502" }, new() { "D004285", "D002415" } };
+var articles = File.Exists(filename) ? await LoadArticlesFromFile(filename) : await LoadFromPubMed(pubMedClient, filename, vetSurgeryMeshTerms);
 
+// get the list of mesh terms from the loaded articles
+var termsToExclude = vetSurgeryMeshTerms.SelectMany(x => x).ToList();
 var meshTerms = new Dictionary<string, MeshTerm>();
 foreach (var meshHeading in articles.Where(article => article.MajorTopicMeshHeadings != null).SelectMany(article => article.MajorTopicMeshHeadings!))
 {
+    if (termsToExclude.Contains(meshHeading.DescriptorId)) continue;  //don't bother clustering on terms that everything is supposed to contain
     meshTerms.TryAdd(meshHeading.DescriptorId, meshHeading);
 }
 
+// cluster the articles
 var clustering = new HierarchicalClusteringService(meshTerms);
-clustering.Initialize();
 clustering.GetClusters(articles);
 
 return;
@@ -73,17 +79,15 @@ static async Task<List<Article>> LoadArticlesFromFile(string filename)
     return JsonConvert.DeserializeObject<List<Article>>(await File.ReadAllTextAsync(filename)) ?? [];
 }
 
-static async Task<List<Article>> LoadFromPubMed(IPubMedClient pubMedClient, string filename)
+static async Task<List<Article>> LoadFromPubMed(IPubMedClient pubMedClient, string filename, List<List<string>> meshTerms)
 {
     Console.WriteLine("Loading from PubMed");
-
-    var vetSurgeryMeshTerms = new List<List<string>> { new() { "veterinary" }, new() { "surgery" }, new() { "dogs", "cats" } };
 
     var threeYearArticles = new ArticleFilter
     {
         EndYear = 2024,
         StartYear = 2021,
-        MeshTerm = vetSurgeryMeshTerms,
+        MeshTerm = meshTerms,
         Journal = ["J Feline Med Surg", "J Vet Emerg Crit Care (San Antonio)", "J Vet Intern Med", "Vet Radiol Ultrasound"]
     };
 
@@ -91,7 +95,7 @@ static async Task<List<Article>> LoadFromPubMed(IPubMedClient pubMedClient, stri
     {
         EndYear = 2024,
         StartYear = 2019,
-        MeshTerm = vetSurgeryMeshTerms,
+        MeshTerm = meshTerms,
         Journal = ["J Am Vet Med Assoc", "J Small Anim Pract", "Vet Comp Orthop Traumatol", "Vet Surg"]
     };
 
@@ -100,6 +104,8 @@ static async Task<List<Article>> LoadFromPubMed(IPubMedClient pubMedClient, stri
     //save to file
     var jsonString = JsonConvert.SerializeObject(articles);
     File.WriteAllText(filename, jsonString);
+
+    await pubMedClient.GenerateArticleDataFile(articles);
 
     return articles;
 }

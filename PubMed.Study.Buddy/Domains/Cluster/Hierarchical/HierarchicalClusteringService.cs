@@ -3,8 +3,16 @@ using System.Text;
 
 namespace PubMed.Study.Buddy.Domains.Cluster.Hierarchical;
 
-public class HierarchicalClusteringService(Dictionary<string, MeshTerm> meshTerms) : IClusterService
+public class HierarchicalClusteringService : IClusterService
 {
+    private readonly Dictionary<string, MeshTerm> _meshTerms;
+
+    public HierarchicalClusteringService(Dictionary<string, MeshTerm> meshTerms)
+    {
+        _meshTerms = meshTerms;
+        Initialize();
+    }
+
     //this is the size at which we deem a cluster sufficiently large
     private const int MinClusterSize = 3;
 
@@ -20,9 +28,9 @@ public class HierarchicalClusteringService(Dictionary<string, MeshTerm> meshTerm
     /// <summary>
     /// Create a preprocessed distance matrix for all the mesh terms.
     /// </summary>
-    public void Initialize()
+    private void Initialize()
     {
-        _meshTermsList = [.. meshTerms.Values];
+        _meshTermsList = [.. _meshTerms.Values];
         _matrixKeys = [];
 
         var index = 0;

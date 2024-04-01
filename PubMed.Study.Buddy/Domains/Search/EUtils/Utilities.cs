@@ -9,7 +9,7 @@ internal class Utilities(IReadOnlyDictionary<string, MeshTerm> meshTerms)
     /// <summary>
     /// Create a query string for the eSearch PubMed utility from an article filter.
     /// </summary>
-    public static string GetQueryFromArticleFilter(ArticleFilter filter)
+    public string GetQueryFromArticleFilter(ArticleFilter filter)
     {
         var queryParams = new List<string>
         {
@@ -40,8 +40,12 @@ internal class Utilities(IReadOnlyDictionary<string, MeshTerm> meshTerms)
                 var orTerms = new List<string>();
                 //inner list is ORed together
                 // ReSharper disable once ForeachCanBeConvertedToQueryUsingAnotherGetEnumerator
-                foreach (var term in orList)
+                foreach (var termId in orList)
                 {
+                    //map the id to the mesh descriptor name; eutils search uses the descriptor name for filtering
+                    if (!meshTerms.ContainsKey(termId)) continue;
+
+                    var term = meshTerms[termId].DescriptorName;
                     var escapedTerm = Uri.EscapeDataString(term);
                     orTerms.Add(string.Join("+OR+", $"{escapedTerm}[{EUtilsConstants.MeshField}]",
                         $"{escapedTerm}[{EUtilsConstants.MeshMajorTopicField}]",

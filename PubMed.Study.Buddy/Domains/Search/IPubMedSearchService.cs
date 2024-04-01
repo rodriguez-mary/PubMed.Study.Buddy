@@ -6,4 +6,6 @@ public interface IPubMedSearchService
 {
     //return a list of article Ids
     public Task<List<Article>> FindArticles(ArticleFilter filter);
+
+    public Task<Dictionary<string, MeshTerm>> GetMeshTerms();
 }
