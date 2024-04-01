@@ -8,7 +8,7 @@ namespace PubMed.Study.Buddy.Domains.Cluster.Agglomerative;
 
 internal class AgglomerativeClusteringService : IClusterService
 {
-    public List<Models.Cluster> GetClusters(List<Article> articles)
+    public List<ArticleSet> ClusterArticles(List<Article> articles)
     {
         Console.WriteLine("Clustering...");
         var articleSet = new HashSet<Article>(articles);
@@ -19,7 +19,6 @@ internal class AgglomerativeClusteringService : IClusterService
         var clustering = clusteringAlg.GetClustering(articleSet);
 
         clustering.SaveToCsv(@"c:\temp\studybuddy\clustering.csv");
-
 
         Console.WriteLine("Evaluating...");
         // evaluates the clustering according to several criteria

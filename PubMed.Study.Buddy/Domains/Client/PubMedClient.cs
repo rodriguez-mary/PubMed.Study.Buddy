@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using PubMed.Study.Buddy.Domains.FlashCard;
 using PubMed.Study.Buddy.Domains.ImpactScoring;
 using PubMed.Study.Buddy.Domains.Output;
 using PubMed.Study.Buddy.Domains.Search;
@@ -7,7 +8,7 @@ using PubMed.Study.Buddy.DTOs;
 namespace PubMed.Study.Buddy.Domains.Client;
 
 public class PubMedClient(ILogger<PubMedClient> logger, IPubMedSearchService searchService,
-    IImpactScoringService impactScoringService, IOutputService outputService) : IPubMedClient
+    IImpactScoringService impactScoringService, IOutputService outputService, IFlashCardService flashCardService) : IPubMedClient
 {
     public async Task<List<Article>> FindArticles(List<ArticleFilter> filters)
     {
@@ -41,8 +42,24 @@ public class PubMedClient(ILogger<PubMedClient> logger, IPubMedSearchService sea
         return articles;
     }
 
+    public async Task<Dictionary<string, MeshTerm>> GetMeshTerms()
+    {
+        return await searchService.GetMeshTerms();
+    }
+
     public async Task GenerateArticleDataFile(List<Article> articles)
     {
         await outputService.GenerateArticleDataFile(articles);
+    }
+
+    public async Task<List<FlashCardSet>> GenerateFlashCards(List<ArticleSet> articleSets)
+    {
+        var flashCardSets = new List<FlashCardSet>();
+        foreach (var articleSet in articleSets)
+        {
+            flashCardSets.Add(await flashCardService.GenerateFlashCards(articleSet));
+        }
+
+        return flashCardSets;
     }
 }

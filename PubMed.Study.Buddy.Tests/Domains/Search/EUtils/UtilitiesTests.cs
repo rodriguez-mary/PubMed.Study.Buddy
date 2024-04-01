@@ -1,4 +1,5 @@
-﻿using PubMed.Study.Buddy.Domains.Search.EUtils;
+﻿using System.Collections.ObjectModel;
+using PubMed.Study.Buddy.Domains.Search.EUtils;
 using PubMed.Study.Buddy.Domains.Search.EUtils.Models;
 using PubMed.Study.Buddy.DTOs;
 using Author = PubMed.Study.Buddy.Domains.Search.EUtils.Models.Author;
@@ -13,7 +14,7 @@ public class UtilitiesTests
     [TestMethod]
     public void GetQueryFromArticleFilter_IncludesDatabaseParameter()
     {
-        var result = Utilities.GetQueryFromArticleFilter(new ArticleFilter());
+        var result = new Utilities(new Dictionary<string, MeshTerm>()).GetQueryFromArticleFilter(new ArticleFilter());
 
         Assert.IsNotNull(result);
         var qp = GetQueryParams(result);
@@ -27,7 +28,7 @@ public class UtilitiesTests
         const int startYear = 2020;
         const int endYear = 2023;
 
-        var result = Utilities.GetQueryFromArticleFilter(new ArticleFilter
+        var result = new Utilities(new Dictionary<string, MeshTerm>()).GetQueryFromArticleFilter(new ArticleFilter
         {
             StartYear = startYear,
             EndYear = endYear
@@ -46,7 +47,7 @@ public class UtilitiesTests
     {
         const string journal = "super legit journal";
 
-        var result = Utilities.GetQueryFromArticleFilter(new ArticleFilter
+        var result = new Utilities(new Dictionary<string, MeshTerm>()).GetQueryFromArticleFilter(new ArticleFilter
         {
             Journal = [journal]
         });
@@ -64,7 +65,7 @@ public class UtilitiesTests
     {
         const string meshTerm = "some term";
 
-        var result = Utilities.GetQueryFromArticleFilter(new ArticleFilter
+        var result = new Utilities(new Dictionary<string, MeshTerm>()).GetQueryFromArticleFilter(new ArticleFilter
         {
             MeshTerm = [[meshTerm]]
         });
@@ -87,7 +88,7 @@ public class UtilitiesTests
         const string termA2 = "a2";
         const string termB1 = "b1";
 
-        var result = Utilities.GetQueryFromArticleFilter(new ArticleFilter
+        var result = new Utilities(new Dictionary<string, MeshTerm>()).GetQueryFromArticleFilter(new ArticleFilter
         {
             MeshTerm = [[termA1, termA2], [termB1]]  //As should be ORed and B should be ANDed with As
         });
@@ -112,7 +113,7 @@ public class UtilitiesTests
         const string meshTerm = "meshTerm";
         const string journal = "journal";
 
-        var result = Utilities.GetQueryFromArticleFilter(new ArticleFilter
+        var result = new Utilities(new Dictionary<string, MeshTerm>()).GetQueryFromArticleFilter(new ArticleFilter
         {
             MeshTerm = [[meshTerm]],
             Journal = [journal]

@@ -3,95 +3,124 @@ using System.Text;
 
 namespace PubMed.Study.Buddy.Domains.Cluster.Hierarchical;
 
-public class HierarchicalClusteringService : IClusterService
+public class HierarchicalClusteringService(IReadOnlyDictionary<string, MeshTerm> meshTerms) : IClusterService
 {
-    private readonly Dictionary<string, MeshTerm> _meshTerms;
-
-    public HierarchicalClusteringService(Dictionary<string, MeshTerm> meshTerms)
-    {
-        _meshTerms = meshTerms;
-        Initialize();
-    }
-
     //this is the size at which we deem a cluster sufficiently large
-    private const int MinClusterSize = 3;
+    private const int MinClusterSize = 10;
 
-    //this is the distance we deem "too far" to cluster content
-    //max distance should supersede min size--it's useless if we cluster very disparate things together
-    private const int MaxClusterDistance = 3000;  //a max distance of 3k means we allow for two bizzaro mesh terms that don't ever match with anything
+    // this defines how many unconnected terms we allow in the mesh terms. this allows for articles to match even if all their terms don't connect to each other
+    private const double MaxUnconnectedPercentage = .25;
 
     private const int MaxDistance = 1000;
-    private List<MeshTerm> _meshTermsList = [];
     private Dictionary<string, int> _matrixKeys = [];
     private int[,] _distanceMatrix = new int[0, 0];
 
+    private readonly Utilities _utilities = new(meshTerms);
+
     /// <summary>
-    /// Create a preprocessed distance matrix for all the mesh terms.
+    /// Create a preprocessed distance matrix for all the mesh terms from the articles being clustered.
     /// </summary>
-    private void Initialize()
+    private void Initialize(IEnumerable<Article> articles)
     {
-        _meshTermsList = [.. _meshTerms.Values];
+        var meshTermDict = new Dictionary<string, MeshTerm>();
+        foreach (var meshHeading in articles.Where(article => article.MajorTopicMeshHeadings != null).SelectMany(article => article.MajorTopicMeshHeadings!))
+        {
+            meshTermDict.TryAdd(meshHeading.DescriptorId, meshHeading);
+        }
+
+        var meshTerms = meshTermDict.Values.ToList();
+
         _matrixKeys = [];
 
         var index = 0;
-        foreach (var meshTerm in _meshTermsList)
+        foreach (var meshTerm in meshTerms)
         {
             _matrixKeys[meshTerm.DescriptorId] = index;
             index++;
         }
 
-        _distanceMatrix = CreateDistanceMatrix();
+        _distanceMatrix = CreateDistanceMatrix(meshTerms);
     }
 
-    public List<Models.Cluster> GetClusters(List<Article> baseArticles)
+    public List<ArticleSet> ClusterArticles(List<Article> baseArticles)
     {
-        var articles = GetArticles(baseArticles, []);
+        var articles = GetArticles(baseArticles, []);// ["38318920", "31016746", "37116877", "35137433", "34643954", "34590311", "33978435", "33587301", "33539210", "32974903", "32597736"]);
+        Initialize(articles);
 
         var matrix = GetArticleDistanceMatrix(articles);
         var clusters = ClusterArticles(articles, matrix);
 
-        using var sw = new StreamWriter(@"c:\temp\studybuddy\hierarchical.csv", false, Encoding.UTF8);
-        sw.WriteLine("article count,articles");
+        // deduplicate the clusters
+        var deduplicatedClusters = new List<ArticleSet>();
         foreach (var cluster in clusters)
         {
-            var a = cluster.Articles;
-            sw.WriteLine($"{a.Count},{string.Join(",", a)}");
+            if (deduplicatedClusters.Contains(cluster)) continue;
+            deduplicatedClusters.Add(cluster);
         }
 
-        return clusters;
+        // cluster article sets that have the same name
+        var clustersByName = new Dictionary<string, ArticleSet>();
+        foreach (var cluster in deduplicatedClusters)
+        {
+            if (!clustersByName.ContainsKey(cluster.Name))
+                clustersByName.Add(cluster.Name, new ArticleSet { Name = cluster.Name });
+
+            clustersByName[cluster.Name].Articles.AddRange(cluster.Articles);
+        }
+        var clustersList = clustersByName.Values.ToList();
+
+        using var sw = new StreamWriter(@"c:\temp\studybuddy\hierarchical.csv", false, Encoding.UTF8);
+        sw.WriteLine("articles,cluster name,articles");
+        foreach (var cluster in clustersList)
+        {
+            var a = cluster.Articles;
+            sw.WriteLine($"{a.Count},{cluster.Name.Replace(",", "")},{string.Join(",", a)}");
+        }
+
+        return clustersList;
     }
 
-    private List<Models.Cluster> ClusterArticles(List<Article> articles, int[,] matrix)
+    private List<ArticleSet> ClusterArticles(List<Article> articles, int[,] matrix)
     {
-        var articleKeys = new Dictionary<string, int>();
-        var index = 0;
+        var maxMeshTerms = 0;
         foreach (var article in articles)
         {
-            articleKeys[article.Id] = index;
-            index++;
+            if (article.MajorTopicMeshHeadings?.Count > maxMeshTerms)
+                maxMeshTerms = article.MajorTopicMeshHeadings.Count;
         }
 
-        var clusterDict = new Dictionary<int, Models.Cluster>();
+        var clusterDict = new Dictionary<int, ArticleSet>();
         for (var i = 0; i < matrix.GetLength(0); i++)
-            clusterDict.Add(i, new Models.Cluster());
+            clusterDict.Add(i, new ArticleSet());
 
-        //basically, we have our list of articles that need to be clustered (articleKeys)
-        //we iteratively loop through all the articles and cluster them by increasing distances
-        //if they meet the requirement of min size
-        //then we pull them from the list that needs to be clustered
+        // basically, we have our list of articles that need to be clustered (articleKeys)
+        // we iteratively loop through all the articles and cluster them by increasing distances
+        // if they meet the requirement of min size
+        // then we pull them from the list that needs to be clustered
         var colLength = matrix.GetLength(1);
         var currentMaxDistance = 0;
-        while (currentMaxDistance <= MaxClusterDistance)
+        while (currentMaxDistance <= maxMeshTerms * MaxDistance)
         {
             foreach (var (pos, cluster) in clusterDict)
             {
                 if (cluster.Articles.Count >= MinClusterSize) continue;
 
+                var posMaxDistance = Math.Round(articles[pos].MajorTopicMeshHeadings?.Count ?? 0 * MaxUnconnectedPercentage) * MaxDistance;
+                if (currentMaxDistance > posMaxDistance) continue;
+
                 for (var i = 0; i < colLength; i++)
                 {
-                    if (matrix[pos, i] == currentMaxDistance)  //== rather than <= to avoid adding the same article multiple times
+                    // we require at least 50% of the terms be connected
+                    // we know that there are unconnected terms for every 1k in the distance
+                    // so, if we're in unconnected term territory then we need to make sure it's less than the allowed percentage
+                    var iMaxDistance = Math.Round(articles[i].MajorTopicMeshHeadings?.Count ?? 0 * MaxUnconnectedPercentage) * MaxDistance;
+                    if (currentMaxDistance > iMaxDistance) continue;
+
+                    var distance = matrix[pos, i];
+                    if (distance == currentMaxDistance)  // == rather than <= to avoid adding the same article multiple times
                     {
                         cluster.Articles.Add(articles[i]);
+                        cluster.Distance = distance;
                     }
                 }
             }
@@ -99,7 +128,49 @@ public class HierarchicalClusteringService : IClusterService
             currentMaxDistance++;
         }
 
-        return [.. clusterDict.Values];
+        //write out distance matrix to eyeball
+        using var sw = new StreamWriter(@"c:\temp\studybuddy\distance_matrix.csv", false, Encoding.UTF8);
+
+        var header = "";
+        for (var i = 0; i < articles.Count; i++)
+            header += $",{articles[i].Id}";
+
+        sw.WriteLine(header);
+
+        for (var i = 0; i < articles.Count; i++)
+        {
+            sw.Write($"{articles[i].Id}");
+            for (var j = 0; j < articles.Count; j++)
+            {
+                var x = matrix[i, j];
+                sw.Write($",{x}");
+            }
+
+            sw.WriteLine();
+        }
+
+        var clusters = clusterDict.Values.ToList();
+
+        foreach (var cluster in clusters)
+        {
+            cluster.Name = _utilities.DetermineClusterName(cluster.Articles);
+        }
+
+        return clusters;
+    }
+
+    private List<Article> GetArticles(List<Article> baseArticles, List<string> ids)
+    {
+        if (ids.Count == 0) return baseArticles;
+
+        var articles = new List<Article>();
+        foreach (var art in baseArticles)
+        {
+            if (ids.Contains(art.Id))
+                articles.Add(art);
+        }
+
+        return articles;
     }
 
     private int[,] GetArticleDistanceMatrix(IReadOnlyList<Article> articles)
@@ -118,50 +189,7 @@ public class HierarchicalClusteringService : IClusterService
             }
         }
 
-        //write out distance matrix to eyeball
-        using var sw = new StreamWriter(@"c:\temp\studybuddy\agglomerative.csv", false, Encoding.UTF8);
-
-        var header = "";
-        for (var i = 0; i < articles.Count; i++)
-            header += $",{articles[i].Id}";
-
-        sw.WriteLine(header);
-
-        for (var i = 0; i < articles.Count; i++)
-        {
-            sw.Write($"{articles[i].Id}");
-            for (var j = 0; j < articles.Count; j++)
-            {
-                var x = matrix[i, j];
-                if (x < MaxDistance)
-                    sw.Write($",{x}");
-                else
-                    sw.Write(",");
-            }
-
-            sw.WriteLine();
-        }
-
         return matrix;
-    }
-
-    private List<Article> GetArticles(List<Article> baseArticles, List<string> ids)
-    {
-        if (ids.Count == 0) return baseArticles;
-
-        var articleLookup = new Dictionary<string, Article>();
-        foreach (var art in baseArticles)
-        {
-            articleLookup.Add(art.Id, art);
-        }
-
-        var articles = new List<Article>();
-        foreach (var id in ids)
-        {
-            articles.Add(articleLookup[id]);
-        }
-
-        return articles;
     }
 
     private int ArticleDistance(Article article1, Article article2)
@@ -215,16 +243,16 @@ public class HierarchicalClusteringService : IClusterService
     /// <summary>
     /// This creates a preprocessed distance matrix with all the mesh terms we care about.
     /// </summary>
-    private int[,] CreateDistanceMatrix()
+    private static int[,] CreateDistanceMatrix(IReadOnlyList<MeshTerm> meshTerms)
     {
-        var size = _meshTermsList.Count;
+        var size = meshTerms.Count;
         var matrix = new int[size, size];
 
-        for (var i = 0; i < _meshTermsList.Count; i++)
+        for (var i = 0; i < meshTerms.Count; i++)
         {
-            for (var j = i + 1; j < _meshTermsList.Count; j++)
+            for (var j = i + 1; j < meshTerms.Count; j++)
             {
-                var distance = MinimumDistance(_meshTermsList[i].TreeNumber, _meshTermsList[j].TreeNumber);
+                var distance = MinimumDistance(meshTerms[i].TreeNumber, meshTerms[j].TreeNumber);
                 matrix[i, j] = distance;
                 matrix[j, i] = distance;
             }

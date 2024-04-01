@@ -2,7 +2,7 @@
 
 namespace PubMed.Study.Buddy.Domains.FlashCard;
 
-internal interface IFlashCardService
+public interface IFlashCardService
 {
-    Task GenerateFlashCards(List<Article> articles);
+    Task<FlashCardSet> GenerateFlashCards(ArticleSet articles);
 }

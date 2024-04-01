@@ -7,7 +7,7 @@ public class JaccardSimilarityClusterService : IClusterService
 {
     private readonly List<string> _testIds = new() { "35521894", "35481715" };
 
-    public List<Models.Cluster> GetClusters(List<Article> allArticles)
+    public List<ArticleSet> ClusterArticles(List<Article> allArticles)
     {
         var articles = GetArticles(allArticles, false);
 
@@ -38,7 +38,7 @@ public class JaccardSimilarityClusterService : IClusterService
             sw.WriteLine($"{key},{string.Join(",", value)}");
         }
 
-        return new List<Models.Cluster>();
+        return [];
     }
 
     private List<Article> GetArticles(List<Article> allArticles, bool useTestIds)

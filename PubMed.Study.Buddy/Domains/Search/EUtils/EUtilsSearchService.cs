@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using PubMed.Study.Buddy.Domains.Search.EUtils.Models;
 using PubMed.Study.Buddy.Domains.Search.Exceptions;
 using PubMed.Study.Buddy.DTOs;
@@ -24,6 +25,7 @@ public class EUtilsSearchService : IPubMedSearchService
         _logger = logger;
         _apiKey = apiKey;
         _httpClient = httpClient;
+        _httpClient.Timeout = TimeSpan.FromMinutes(5);
         _httpClient.BaseAddress = new Uri(eUtilsAddress);
     }
 
@@ -56,11 +58,15 @@ public class EUtilsSearchService : IPubMedSearchService
 
     public async Task<Dictionary<string, MeshTerm>> GetMeshTerms()
     {
+        var filename = Path.Combine(@"c:\temp\studybuddy", "meshterms.json");
+        if (File.Exists(filename))
+            return JsonConvert.DeserializeObject<Dictionary<string, MeshTerm>>(await File.ReadAllTextAsync(filename)) ?? [];
         return await LoadMeshTerms();
     }
 
     private async Task<Dictionary<string, MeshTerm>> LoadMeshTerms()
     {
+        var filename = Path.Combine(@"c:\temp\studybuddy", "meshterms.json");
         if (_meshTerms != null) return _meshTerms;
 
         var meshTerms = new Dictionary<string, MeshTerm>();
@@ -94,6 +100,10 @@ public class EUtilsSearchService : IPubMedSearchService
         }
 
         _meshTerms = meshTerms;
+
+        var jsonString = JsonConvert.SerializeObject(meshTerms);
+        await File.WriteAllTextAsync(filename, jsonString);
+
         return meshTerms;
     }
 

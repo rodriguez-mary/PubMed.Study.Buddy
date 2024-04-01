@@ -4,5 +4,5 @@ namespace PubMed.Study.Buddy.Domains.Cluster;
 
 public interface IClusterService
 {
-    public List<Models.Cluster> GetClusters(List<Article> articles);
+    public List<ArticleSet> ClusterArticles(List<Article> articles);
 }

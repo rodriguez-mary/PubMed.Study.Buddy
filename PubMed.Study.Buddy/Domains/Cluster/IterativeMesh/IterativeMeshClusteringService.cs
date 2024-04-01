@@ -5,7 +5,7 @@ namespace PubMed.Study.Buddy.Domains.Cluster.IterativeMesh;
 
 public class IterativeMeshClusteringService : IClusterService
 {
-    public List<Models.Cluster> GetClusters(List<Article> articles)
+    public List<ArticleSet> ClusterArticles(List<Article> articles)
     {
         var meshTermsDictionary = new Dictionary<string, List<string>>();
 
@@ -30,6 +30,6 @@ public class IterativeMeshClusteringService : IClusterService
             sw.WriteLine($"{key},{string.Join(",", value)}");
         }
 
-        return new List<Models.Cluster>();
+        return [];
     }
 }

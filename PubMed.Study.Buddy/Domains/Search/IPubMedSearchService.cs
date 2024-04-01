@@ -5,7 +5,7 @@ namespace PubMed.Study.Buddy.Domains.Search;
 public interface IPubMedSearchService
 {
     //return a list of article Ids
-    public Task<List<Article>> FindArticles(ArticleFilter filter);
+    Task<List<Article>> FindArticles(ArticleFilter filter);
 
-    public Task<Dictionary<string, MeshTerm>> GetMeshTerms();
+    Task<Dictionary<string, MeshTerm>> GetMeshTerms();
 }

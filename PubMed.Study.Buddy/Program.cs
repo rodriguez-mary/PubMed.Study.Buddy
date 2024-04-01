@@ -6,6 +6,8 @@ using Polly;
 using Polly.Extensions.Http;
 using PubMed.Study.Buddy.Domains.Client;
 using PubMed.Study.Buddy.Domains.Cluster.Hierarchical;
+using PubMed.Study.Buddy.Domains.FlashCard;
+using PubMed.Study.Buddy.Domains.FlashCard.ChatGpt;
 using PubMed.Study.Buddy.Domains.ImpactScoring;
 using PubMed.Study.Buddy.Domains.ImpactScoring.CitationNumber;
 using PubMed.Study.Buddy.Domains.Output;
@@ -37,6 +39,7 @@ builder.Services.AddHttpClient<IPubMedSearchService, EUtilsSearchService>()
 builder.Services.AddSingleton<IImpactScoringService, CitationNumberImpactScoringService>();
 builder.Services.AddSingleton<IOutputService, LocalIoService>();
 builder.Services.AddSingleton<IPubMedClient, PubMedClient>();
+builder.Services.AddSingleton<IFlashCardService, ChatGptFlashCardService>();
 
 var serviceProvider = builder.Services.BuildServiceProvider();
 
@@ -49,18 +52,12 @@ var filename = Path.Combine(@"c:\temp\studybuddy", "articles.json");
 var vetSurgeryMeshTerms = new List<List<string>> { new() { "Q000662" }, new() { "D013502" }, new() { "D004285", "D002415" } };
 var articles = File.Exists(filename) ? await LoadArticlesFromFile(filename) : await LoadFromPubMed(pubMedClient, filename, vetSurgeryMeshTerms);
 
-// get the list of mesh terms from the loaded articles
-var termsToExclude = vetSurgeryMeshTerms.SelectMany(x => x).ToList();
-var meshTerms = new Dictionary<string, MeshTerm>();
-foreach (var meshHeading in articles.Where(article => article.MajorTopicMeshHeadings != null).SelectMany(article => article.MajorTopicMeshHeadings!))
-{
-    if (termsToExclude.Contains(meshHeading.DescriptorId)) continue;  //don't bother clustering on terms that everything is supposed to contain
-    meshTerms.TryAdd(meshHeading.DescriptorId, meshHeading);
-}
-
 // cluster the articles
+Console.WriteLine("Getting mesh terms");
+var meshTerms = await pubMedClient.GetMeshTerms();
+Console.WriteLine("Clustering...");
 var clustering = new HierarchicalClusteringService(meshTerms);
-clustering.GetClusters(articles);
+var clusters = clustering.ClusterArticles(articles);
 
 return;
 
