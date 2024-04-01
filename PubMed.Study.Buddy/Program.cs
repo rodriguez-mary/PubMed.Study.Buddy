@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using Polly;
 using Polly.Extensions.Http;
 using PubMed.Study.Buddy.Domains.Client;
+using PubMed.Study.Buddy.Domains.Cluster.Agglomerative;
 using PubMed.Study.Buddy.Domains.Cluster.Hierarchical;
 using PubMed.Study.Buddy.Domains.ImpactScoring;
 using PubMed.Study.Buddy.Domains.ImpactScoring.CitationNumber;
@@ -51,8 +52,7 @@ foreach (var meshHeading in articles.Where(article => article.MajorTopicMeshHead
     meshTerms.TryAdd(meshHeading.DescriptorId, meshHeading);
 }
 
-var clustering = new HierarchicalClusteringService(meshTerms);
-clustering.Initialize();
+var clustering = new AgglomerativeClusteringService();
 clustering.GetClusters(articles);
 
 return;

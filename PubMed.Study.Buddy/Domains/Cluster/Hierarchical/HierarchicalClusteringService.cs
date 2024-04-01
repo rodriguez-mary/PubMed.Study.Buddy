@@ -5,6 +5,13 @@ namespace PubMed.Study.Buddy.Domains.Cluster.Hierarchical;
 
 public class HierarchicalClusteringService(Dictionary<string, MeshTerm> meshTerms) : IClusterService
 {
+    //this is the size at which we deem a cluster sufficiently large
+    private const int MinClusterSize = 3;
+
+    //this is the distance we deem "too far" to cluster content
+    //max distance should supersede min size--it's useless if we cluster very disparate things together
+    private const int MaxClusterDistance = 6;
+
     private const int MaxDistance = 1000;
     private List<MeshTerm> _meshTermsList = [];
     private Dictionary<string, int> _matrixKeys = [];
@@ -32,6 +39,12 @@ public class HierarchicalClusteringService(Dictionary<string, MeshTerm> meshTerm
     {
         var articles = GetArticles(baseArticles, new List<string> { });
 
+        var matrix = GetArticleDistanceMatrix(articles);
+        return ClusterArticles(articles, matrix);
+    }
+
+    private List<Models.Cluster> ClusterArticles(List<Article> articles, int[,] matrix)
+    {
         var articleKeys = new Dictionary<string, int>();
         var index = 0;
         foreach (var article in articles)
@@ -40,6 +53,16 @@ public class HierarchicalClusteringService(Dictionary<string, MeshTerm> meshTerm
             index++;
         }
 
+        //basically, we have our list of articles that need to be clustered (articleKeys)
+        //we iteratively loop through all the articles and cluster them by increasing distances
+        //if they meet the requirement of min size
+        //then we pull them from the list that needs to be clustered
+
+        return [];
+    }
+
+    private int[,] GetArticleDistanceMatrix(List<Article> articles)
+    {
         var size = articles.Count;
         var matrix = new int[size, size];
 
@@ -53,6 +76,7 @@ public class HierarchicalClusteringService(Dictionary<string, MeshTerm> meshTerm
             }
         }
 
+        //write out distance matrix to eyeball
         using var sw = new StreamWriter(@"c:\temp\studybuddy\agglomerative.csv", false, Encoding.UTF8);
 
         var header = "";
@@ -76,7 +100,7 @@ public class HierarchicalClusteringService(Dictionary<string, MeshTerm> meshTerm
             sw.WriteLine();
         }
 
-        return new List<Models.Cluster>();
+        return matrix;
     }
 
     private List<Article> GetArticles(List<Article> baseArticles, List<string> ids)
@@ -100,27 +124,24 @@ public class HierarchicalClusteringService(Dictionary<string, MeshTerm> meshTerm
 
     private int ArticleDistance(Article article1, Article article2)
     {
-        var article1ListLength = article1.MajorTopicMeshHeadings?.Count ?? 0;
-        var article2ListLength = article2.MajorTopicMeshHeadings?.Count ?? 0;
-        if (article1ListLength == 0 || article2ListLength == 0) return MaxDistance;
+        var list1 = article1.MajorTopicMeshHeadings;
+        var list2 = article2.MajorTopicMeshHeadings;
 
-        List<MeshTerm> longList;
-        List<MeshTerm> shortList;
-        if (article1ListLength > article2ListLength)
-        {
-            longList = article1.MajorTopicMeshHeadings!;
-            shortList = article2.MajorTopicMeshHeadings!;
-        }
-        else
-        {
-            longList = article2.MajorTopicMeshHeadings!;
-            shortList = article1.MajorTopicMeshHeadings!;
-        }
+        if (list1 == null || list2 == null) return MaxDistance;
+        if (list1.Count == 0 || list2.Count == 0) return MaxDistance;
 
+        return ArticleListDistance(list1, list2) + ArticleListDistance(list2, list1);
+    }
+
+    /// <summary>
+    /// Calculate the distance it takes for all of listA to get to any of listB.
+    /// </summary>
+    private int ArticleListDistance(List<MeshTerm> listA, List<MeshTerm> listB)
+    {
         // we need to determine the minimum distance for every descriptor on that article
         // to ANY descriptor on the other article
         var distance = 0;
-        foreach (var meshTermA in longList)
+        foreach (var meshTermA in listA)
         {
             // get the index for
             if (!_matrixKeys.TryGetValue(meshTermA.DescriptorId, out var meshAIndex))
@@ -131,7 +152,7 @@ public class HierarchicalClusteringService(Dictionary<string, MeshTerm> meshTerm
 
             var minDistance = MaxDistance;
             // get the minimum distance to any of the other descriptors
-            foreach (var meshTermB in shortList)
+            foreach (var meshTermB in listB)
             {
                 if (!_matrixKeys.TryGetValue(meshTermB.DescriptorId, out var meshBIndex))
                     continue;

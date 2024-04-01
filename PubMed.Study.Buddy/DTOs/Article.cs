@@ -3,7 +3,7 @@
 namespace PubMed.Study.Buddy.DTOs;
 
 [Serializable]
-public class Article
+public class Article : IComparable<Article>, IEquatable<Article>
 {
     public string Id { get; set; } = string.Empty;
 
@@ -28,4 +28,26 @@ public class Article
     /// List of PubMed article IDs that cite this article.
     /// </summary>
     public List<string>? CitedBy { get; set; }
+
+    public int CompareTo(Article? other)
+    {
+        return other == null ? 0 : string.Compare(Id, other.Id, StringComparison.Ordinal);
+    }
+
+    public override bool Equals(object? obj) => obj is Article article && Equals(article);
+
+    public bool Equals(Article? other)
+    {
+        return other != null && string.Equals(Id, other.Id);
+    }
+
+    public override int GetHashCode()
+    {
+        return Id.GetHashCode();
+    }
+
+    public override string ToString()
+    {
+        return $"{Title.Replace(",", "")}[{Id}]";
+    }
 }
