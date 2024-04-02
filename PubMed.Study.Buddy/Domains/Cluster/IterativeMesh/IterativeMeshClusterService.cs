@@ -3,7 +3,7 @@ using System.Text;
 
 namespace PubMed.Study.Buddy.Domains.Cluster.IterativeMesh;
 
-public class IterativeMeshClusteringService : IClusterService
+public class IterativeMeshClusterService : IClusterService
 {
     public List<ArticleSet> ClusterArticles(List<Article> articles)
     {

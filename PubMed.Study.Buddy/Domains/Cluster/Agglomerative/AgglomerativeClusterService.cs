@@ -6,7 +6,7 @@ using PubMed.Study.Buddy.DTOs;
 
 namespace PubMed.Study.Buddy.Domains.Cluster.Agglomerative;
 
-internal class AgglomerativeClusteringService : IClusterService
+internal class AgglomerativeClusterService : IClusterService
 {
     public List<ArticleSet> ClusterArticles(List<Article> articles)
     {
