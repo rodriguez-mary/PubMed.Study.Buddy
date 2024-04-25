@@ -14,7 +14,7 @@ public class IterativeMeshClusterService : IClusterService
             var key = string.Empty;
             if (article.MajorTopicMeshHeadings != null)
             {
-                var ds = article.MajorTopicMeshHeadings.Select(meshHeading => $"{meshHeading.DescriptorId}:{string.Join(";", meshHeading.TreeNumber)}").ToList();
+                var ds = article.MajorTopicMeshHeadings.Select(meshHeading => $"{meshHeading.DescriptorId}:{string.Join(";", meshHeading.TreeNumbers)}").ToList();
                 key = string.Join("~", ds);
             }
 

@@ -89,7 +89,7 @@ public class EUtilsSearchService : IPubMedSearchService
                     {
                         DescriptorId = descriptorRecord.DescriptorId,
                         DescriptorName = descriptorRecord.DescriptorName.String,
-                        TreeNumber = descriptorRecord.TreeNumberList.TreeNumber
+                        TreeNumbers = descriptorRecord.TreeNumberList.TreeNumber
                     });
                 }
             }

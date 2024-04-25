@@ -36,7 +36,7 @@ public class ArticleDissimilarityMetric : IDissimilarityMetric<Article>
             var minDistance = MaxDistance;
             foreach (var endTerm in end)
             {
-                var thisDistance = MinimumDistance(startTerm.TreeNumber, endTerm.TreeNumber);
+                var thisDistance = MinimumDistance(startTerm.TreeNumbers, endTerm.TreeNumbers);
                 if (thisDistance < minDistance) minDistance = thisDistance;
                 if (minDistance == 0) break; //we can't get any better
             }

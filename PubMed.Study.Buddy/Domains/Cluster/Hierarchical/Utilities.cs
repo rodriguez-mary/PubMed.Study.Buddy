@@ -10,7 +10,7 @@ internal class Utilities
     {
         foreach (var meshTerm in meshTerms.Values)
         {
-            foreach (var treeNumber in meshTerm.TreeNumber)
+            foreach (var treeNumber in meshTerm.TreeNumbers)
             {
                 _termsByTreeNumber.TryAdd(treeNumber, meshTerm);
             }
@@ -33,7 +33,7 @@ internal class Utilities
         {
             for (var j = i + 1; j < meshTerms.Count; j++)
             {
-                var distance = MinimumDistance(meshTerms[i].TreeNumber, meshTerms[j].TreeNumber);
+                var distance = MinimumDistance(meshTerms[i].TreeNumbers, meshTerms[j].TreeNumbers);
                 matrix[i, j] = distance;
                 matrix[j, i] = distance;
             }
@@ -131,7 +131,7 @@ internal class Utilities
 
             foreach (var meshHeading in article.MajorTopicMeshHeadings)
             {
-                foreach (var treeNumber in meshHeading.TreeNumber)
+                foreach (var treeNumber in meshHeading.TreeNumbers)
                 {
                     var decimals = treeNumber.Split(".");
                     for (var i = 0; i < decimals.Length; i++)
