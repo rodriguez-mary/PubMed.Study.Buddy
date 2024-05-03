@@ -5,12 +5,15 @@ namespace PubMed.Study.Buddy.Domains.Cluster.Hierarchical;
 public class HierarchicalByMeshTermClusterService : IClusterService
 {
     //this is the size at which we deem a cluster sufficiently large
-    private const int MinClusterSize = 10;
+    private const int MinClusterSize = 10;     //any selected clustre should have a minimum of this number of articles
+    private const int MinLineageDistance = 3;  //any selected cluster should have a minimum of these levels of lineage
 
     private readonly Dictionary<string, MeshTerm> _meshTermsByTreeNumber = new();
+    private readonly IReadOnlyDictionary<string, MeshTerm> _meshTermsById;
 
     public HierarchicalByMeshTermClusterService(IReadOnlyDictionary<string, MeshTerm> meshTerms)
     {
+        _meshTermsById = meshTerms;
         foreach (var meshTerm in meshTerms.Values)
         {
             foreach (var treeNumber in meshTerm.TreeNumbers)
@@ -22,105 +25,176 @@ public class HierarchicalByMeshTermClusterService : IClusterService
 
     public List<ArticleSet> ClusterArticles(List<Article> articles)
     {
-        var treeNumberCounts = CreateTreeNumberCount(articles);
+        var hierachyCount = BuildHierarchyCount(articles);
 
+        return ClusterArticlesByHierarchy(hierachyCount, articles);
 
-        throw new NotImplementedException();
     }
 
-    /// <summary>
-    /// Determine how many articles could be rolled into an individual tree number.
-    /// TODO: maybe also track distance/the amount of roll-up?
-    /// </summary>
-    private static Dictionary<string, int> CreateTreeNumberCount(List<Article> articles)
-    {
-        var treeNumberCounts = new Dictionary<string, int>();
 
+    private List<ArticleSet> ClusterArticlesByHierarchy(Dictionary<string, HierarchyCount> hierarchyCount, List<Article> articles)
+    {
+        var articlesByMeshTermId = new Dictionary<string, List<Article>>();
         foreach (var article in articles)
         {
-            if (article.MajorTopicMeshHeadings == null) continue;
+            var bestTreeNumbers = BestMatchTreeNumbers(hierarchyCount, article);
 
-            foreach (var meshTerm in article.MajorTopicMeshHeadings)
+            foreach (var number in bestTreeNumbers)
             {
-                foreach (var treeNumber in meshTerm.TreeNumbers)
+
+                if (!_meshTermsByTreeNumber.ContainsKey(number))
                 {
-                    // add an entry for the entire lineage
-                    var numbers = treeNumber.Split(".");
-                    for (var i = 0; i < numbers.Length; i++)
-                    {
-                        var number = string.Join(".", numbers[..i]);
-                        if (!treeNumberCounts.TryAdd(number, 1))
-                            treeNumberCounts[number]++;
-                    }
+                    // write an error then move on
+                    continue;
                 }
 
+                var meshTerm = _meshTermsByTreeNumber[number];
+
+                if (!articlesByMeshTermId.ContainsKey(meshTerm.DescriptorId))
+                    articlesByMeshTermId.Add(meshTerm.DescriptorId, new List<Article>());
+
+                articlesByMeshTermId[meshTerm.DescriptorId].Add(article);
             }
         }
 
-        return treeNumberCounts;
-    }
-
-    /// <summary>
-    /// For an article, get the shortest distance mesh terms that meet the min size requirement
-    /// </summary>
-    private static List<string> GetTreeNumbers(Dictionary<string, int>  treeNumberCount, Article article)
-    {
-        var treeNumbers = new List<string>();
-        if (article.MajorTopicMeshHeadings == null) return treeNumbers;
-
-        foreach (var meshTerm in article.MajorTopicMeshHeadings)
+        var clusteredList = new List<ArticleSet>();
+        foreach (var group in articlesByMeshTermId)
         {
-            foreach (var treeNumber in meshTerm.TreeNumbers)
+            clusteredList.Add(new ArticleSet()
             {
-                var numbers = treeNumber.Split(".");
-                for (var i = numbers.Length; i-- > 0;)
-                {
-                    var number = string.Join(".", numbers[..i]);
-                    if (!treeNumberCount.ContainsKey(number)) continue;
-
-
-                }
-        }
+                Articles = group.Value,
+                Name = _meshTermsById[group.Key].DescriptorName
+            });
         }
 
-        //if we have a tie, then we pick the biggest group
-        //if we still have a tie, then we pick the most specific
-        //if we still have a tie, return the rest
-
-        return treeNumbers;
+        return clusteredList;
     }
 
-    private Dictionary<string, Article> CreateArticleIndex(List<Article> articles)
+
+    /*
+     *  for every article
+     *   - cluster it into the smallest tree number that has a count of > Min cluster count
+     *   - if there are ties, prefer the one that is at the most specific level (most dots)
+     *   - if still tied, add all that are tied
+     *   
+     *   - if there is nothing that exceeds 3, add the biggest one that has at least 3 level of specificity
+     */
+    private List<string> BestMatchTreeNumbers(Dictionary<string, HierarchyCount> hierarchyCount, Article article)
     {
-        var index = new Dictionary<string, Article>();
+        var lineage = ArticleLineage(article);
 
-        foreach (var article in articles)
+        var articleHierarchyCounts = hierarchyCount.Where(x => lineage.Contains(x.Key));
+
+        var validSize = new List<string>();
+        var descendingComparer = Comparer<int>.Create((x, y) => y.CompareTo(x));
+        var validSpecificity = new SortedList<int, List<string>>(descendingComparer);
+        foreach (var (k,v) in articleHierarchyCounts)
         {
-            index.TryAdd(article.Id, article);
-        }
-
-        return index;
-    }
-
-    private Dictionary<string, List<Article>> CreateInitialBuckets(List<Article> articles)
-    {
-        var articlesByMeshTerm = new Dictionary<string, List<Article>>();
-
-        //bucket each article by its mesh terms
-        foreach (var article in articles)
-        {
-            if (article.MajorTopicMeshHeadings == null) continue;
-
-            foreach (var meshTerm in article.MajorTopicMeshHeadings)
+            if (v.Count >= MinClusterSize)
             {
-                if (!articlesByMeshTerm.ContainsKey(meshTerm.DescriptorId))
-                    articlesByMeshTerm.Add(meshTerm.DescriptorId, []);
+                validSize.Add(k);
+            }
+            if (k.Count(x => x == '.') >= MinLineageDistance)
+            {
+                if (!validSpecificity.ContainsKey(v.Count))
+                    validSpecificity.Add(v.Count, new List<string>());
+                validSpecificity[v.Count].Add(k);
+            }
+        }
 
-                articlesByMeshTerm[meshTerm.DescriptorId].Add(article);
+        if (validSize.Count > 0)
+            return SelectMostSpecific(validSize);
+
+        if (validSpecificity.Count > 0)
+            return validSpecificity.First().Value;
+
+        //todo throw error - what kind of bullshit is this?
+        return lineage;
+    }
+
+    private List<string> SelectMostSpecific(List<string> validSize)
+    {
+        var mostSpecific = new List<string>();
+
+        if (validSize.Count <= 0) return mostSpecific; //todo: maybe throw error?
+
+        if (validSize.Count == 1)
+        {
+            mostSpecific.Add(validSize.First());
+            return mostSpecific;
+        }
+
+        var maxLineage = 0;
+        foreach (var item in validSize)
+        {
+            var lineageCount = item.Count(x => x == '.');
+            if (lineageCount > maxLineage)
+            {
+                maxLineage = lineageCount;
+
+                mostSpecific.Clear();
+                mostSpecific.Add(item);
+            }
+            else if (lineageCount == maxLineage)
+            {
+                mostSpecific.Add(item);
             }
 
         }
 
-        return articlesByMeshTerm;
+        return mostSpecific;
+
+    }
+
+    // Creates a count of all the articles that could be rolled up to every particular hierarchy level
+    private Dictionary<string, HierarchyCount> BuildHierarchyCount(List<Article> articles)
+    {
+        var hierarchyCount = new Dictionary<string, HierarchyCount>();
+
+        foreach (var article in articles)
+        {
+            var lineage = ArticleLineage(article);
+
+            foreach (var number in lineage)
+            {
+                if (!hierarchyCount.ContainsKey(number))
+                    hierarchyCount.Add(number, new HierarchyCount());
+
+                hierarchyCount[number].ArticleIds.Add(article.Id);
+            }
+        }
+
+        return hierarchyCount;
+    }
+
+    private List<string> ArticleLineage(Article article)
+    {
+        var lineage = new List<string>();
+
+        if (article.MajorTopicMeshHeadings == null) return lineage;
+
+        foreach (var meshHeading in article.MajorTopicMeshHeadings)
+        {
+            foreach (var treeNumber in meshHeading.TreeNumbers)
+            {
+                var splitNumbers = treeNumber.Split(".");
+                for (var i = 0; i < splitNumbers.Length; i++)
+                {
+                    var number = string.Join(".", splitNumbers[..i]);
+                    lineage.Add(number);
+                }
+            }
+        }
+
+        return lineage;
+    }
+
+
+    private class HierarchyCount
+    {
+        // ease of access for sorting
+       public int Count { get { return ArticleIds.Count; } }
+
+        public List<string> ArticleIds = [];
     }
 }

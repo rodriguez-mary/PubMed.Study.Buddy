@@ -13,10 +13,20 @@ public class LocalIoService(ILogger<LocalIoService> logger, IConfiguration confi
 
     public Task GenerateArticleDataFile(List<Article> articles)
     {
+        EnsureFilePathCreated();
+
         var filePath = Path.Combine(_fileDirectory, $"{_articleListCsvFileName}.csv");
+
         File.WriteAllText(filePath, Utilities.CreateCsvString(articles));
 
         logger.LogInformation("File written to {filePath}.", filePath);
         return Task.CompletedTask;
+    }
+
+
+    private void EnsureFilePathCreated()
+    {
+        if (!Directory.Exists(_fileDirectory))
+            Directory.CreateDirectory(_fileDirectory);
     }
 }

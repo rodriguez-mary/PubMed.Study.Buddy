@@ -56,7 +56,7 @@ var articles = File.Exists(filename) ? await LoadArticlesFromFile(filename) : aw
 Console.WriteLine("Getting mesh terms");
 var meshTerms = await pubMedClient.GetMeshTerms();
 Console.WriteLine("Clustering...");
-var clustering = new HierarchicalClusterService(meshTerms);
+var clustering = new HierarchicalByMeshTermClusterService(meshTerms);
 var clusters = clustering.ClusterArticles(articles);
 
 return;

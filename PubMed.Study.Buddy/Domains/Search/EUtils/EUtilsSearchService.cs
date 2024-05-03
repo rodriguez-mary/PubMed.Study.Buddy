@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using PubMed.Study.Buddy.Domains.Search.EUtils.Models;
 using PubMed.Study.Buddy.Domains.Search.Exceptions;
 using PubMed.Study.Buddy.DTOs;
+using System.IO;
 
 namespace PubMed.Study.Buddy.Domains.Search.EUtils;
 
@@ -14,6 +15,8 @@ public class EUtilsSearchService : IPubMedSearchService
     private readonly string _apiKey;
     private readonly HttpClient _httpClient;
     private readonly ILogger<EUtilsSearchService> _logger;
+
+    private static readonly string FileDirectory = @"c:\temp\studybuddy";
 
     private Dictionary<string, MeshTerm>? _meshTerms;
 
@@ -58,7 +61,8 @@ public class EUtilsSearchService : IPubMedSearchService
 
     public async Task<Dictionary<string, MeshTerm>> GetMeshTerms()
     {
-        var filename = Path.Combine(@"c:\temp\studybuddy", "meshterms.json");
+        EnsureFilePathExists(FileDirectory);
+        var filename = Path.Combine(FileDirectory, "meshterms.json");
         if (File.Exists(filename))
             return JsonConvert.DeserializeObject<Dictionary<string, MeshTerm>>(await File.ReadAllTextAsync(filename)) ?? [];
         return await LoadMeshTerms();
@@ -66,8 +70,9 @@ public class EUtilsSearchService : IPubMedSearchService
 
     private async Task<Dictionary<string, MeshTerm>> LoadMeshTerms()
     {
-        var filename = Path.Combine(@"c:\temp\studybuddy", "meshterms.json");
         if (_meshTerms != null) return _meshTerms;
+        EnsureFilePathExists(FileDirectory);
+        var filename = Path.Combine(FileDirectory, "meshterms.json");
 
         var meshTerms = new Dictionary<string, MeshTerm>();
         const string uri = "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh/desc2024.xml";
@@ -102,6 +107,7 @@ public class EUtilsSearchService : IPubMedSearchService
         _meshTerms = meshTerms;
 
         var jsonString = JsonConvert.SerializeObject(meshTerms);
+
         await File.WriteAllTextAsync(filename, jsonString);
 
         return meshTerms;
@@ -259,5 +265,11 @@ public class EUtilsSearchService : IPubMedSearchService
         }
 
         return results;
+    }
+
+    private void EnsureFilePathExists(string fileDirectory)
+    {
+        if (!Directory.Exists(fileDirectory))
+            Directory.CreateDirectory(fileDirectory);
     }
 }
