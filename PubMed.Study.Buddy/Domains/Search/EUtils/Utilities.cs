@@ -43,9 +43,12 @@ internal class Utilities(IReadOnlyDictionary<string, MeshTerm> meshTerms)
                 foreach (var termId in orList)
                 {
                     //map the id to the mesh descriptor name; eutils search uses the descriptor name for filtering
-                    if (!meshTerms.ContainsKey(termId)) continue;
+                    string term;
+                    if (meshTerms.ContainsKey(termId))
+                        term = meshTerms[termId].DescriptorName;
+                    else
+                        term = termId;
 
-                    var term = meshTerms[termId].DescriptorName;
                     var escapedTerm = Uri.EscapeDataString(term);
                     orTerms.Add(string.Join("+OR+", $"{escapedTerm}[{EUtilsConstants.MeshField}]",
                         $"{escapedTerm}[{EUtilsConstants.MeshMajorTopicField}]",

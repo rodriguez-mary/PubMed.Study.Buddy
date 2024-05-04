@@ -15,6 +15,7 @@ using PubMed.Study.Buddy.Domains.Output.LocalIo;
 using PubMed.Study.Buddy.Domains.Search;
 using PubMed.Study.Buddy.Domains.Search.EUtils;
 using PubMed.Study.Buddy.DTOs;
+using System.Text;
 
 #region register and init services
 
@@ -49,7 +50,8 @@ var pubMedClient = serviceProvider.GetRequiredService<IPubMedClient>();
 
 // get the list of articles
 var filename = Path.Combine(@"c:\temp\studybuddy", "articles.json");
-var vetSurgeryMeshTerms = new List<List<string>> { new() { "Q000662" }, new() { "D013502" }, new() { "D004285", "D002415" } };
+//var vetSurgeryMeshTerms = new List<List<string>> { new() { "Q000662" }, new() { "D013502", "Q000601" }, new() { "D004285", "D002415" } };
+var vetSurgeryMeshTerms = new List<List<string>> { new() { "veterinary" }, new() { "surgery" }, new() { "dogs", "cats" } };
 var articles = File.Exists(filename) ? await LoadArticlesFromFile(filename) : await LoadFromPubMed(pubMedClient, filename, vetSurgeryMeshTerms);
 
 // cluster the articles
@@ -58,6 +60,15 @@ var meshTerms = await pubMedClient.GetMeshTerms();
 Console.WriteLine("Clustering...");
 var clustering = new HierarchicalByMeshTermClusterService(meshTerms);
 var clusters = clustering.ClusterArticles(articles);
+
+
+using var sw = new StreamWriter(@"c:\temp\studybuddy\hierarchical.csv", false, Encoding.UTF8);
+sw.WriteLine("articles,cluster name,articles");
+foreach (var cluster in clusters)
+{
+    var a = cluster.Articles;
+    sw.WriteLine($"{a.Count},{cluster.Name.Replace(",", "")},{string.Join(",", a)}");
+}
 
 return;
 
@@ -85,7 +96,7 @@ static async Task<List<Article>> LoadFromPubMed(IPubMedClient pubMedClient, stri
         EndYear = 2024,
         StartYear = 2021,
         MeshTerm = meshTerms,
-        Journal = ["J Feline Med Surg", "J Vet Emerg Crit Care (San Antonio)", "J Vet Intern Med", "Vet Radiol Ultrasound"]
+        Journal = ["J Feline Med Surg", "J Vet Emerg Crit Care San Antonio", "J Vet Intern Med", "Vet Radiol Ultrasound"]
     };
 
     var fiveYearArticles = new ArticleFilter
