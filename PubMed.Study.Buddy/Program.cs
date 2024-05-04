@@ -62,7 +62,7 @@ var clustering = new HierarchicalByMeshTermClusterService(meshTerms);
 var clusters = clustering.ClusterArticles(articles);
 
 
-using var sw = new StreamWriter(@"c:\temp\studybuddy\hierarchical.csv", false, Encoding.UTF8);
+using var sw = new StreamWriter($@"c:\temp\studybuddy\{clustering.GetType().Name}.csv", false, Encoding.UTF8);
 sw.WriteLine("articles,cluster name,articles");
 foreach (var cluster in clusters)
 {
