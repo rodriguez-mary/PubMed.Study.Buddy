@@ -51,6 +51,7 @@ var serviceProvider = builder.Services.BuildServiceProvider();
 #endregion register and init services
 
 var pubMedClient = serviceProvider.GetRequiredService<IPubMedClient>();
+var outputService = serviceProvider.GetService<IOutputService>();
 
 // get the list of articles
 var filename = Path.Combine(@"c:\temp\studybuddy", "articles.json");
@@ -62,7 +63,7 @@ var articles = File.Exists(filename) ? await LoadArticlesFromFile(filename) : aw
 Console.WriteLine("Getting mesh terms");
 var meshTerms = await pubMedClient.GetMeshTerms();
 Console.WriteLine("Clustering...");
-var clustering = new HierarchicalByMeshTermClusterService(meshTerms);
+var clustering = new HierarchicalClusterService(meshTerms);
 var clusters = clustering.ClusterArticles(articles);
 
 using var sw = new StreamWriter($@"c:\temp\studybuddy\{clustering.GetType().Name}.csv", false, Encoding.UTF8);
@@ -93,8 +94,7 @@ static async Task<List<Article>> LoadArticlesFromFile(string filename)
     Console.WriteLine("Loading from file");
     return JsonConvert.DeserializeObject<List<Article>>(await File.ReadAllTextAsync(filename)) ?? [];
 }
-
-static async Task<List<Article>> LoadFromPubMed(IPubMedClient pubMedClient, string filename, List<List<string>> meshTerms)
+async Task<List<Article>> LoadFromPubMed(IPubMedClient pubMedClient, string filename, List<List<string>> meshTerms)
 {
     Console.WriteLine("Loading from PubMed");
 
@@ -114,13 +114,13 @@ static async Task<List<Article>> LoadFromPubMed(IPubMedClient pubMedClient, stri
         Journal = ["J Am Vet Med Assoc", "J Small Anim Pract", "Vet Comp Orthop Traumatol", "Vet Surg"]
     };
 
-    var articles = await pubMedClient.FindArticles([threeYearArticles, fiveYearArticles]);
+    var articles = await pubMedClient.GetArticles([threeYearArticles, fiveYearArticles]);
 
     //save to file
     var jsonString = JsonConvert.SerializeObject(articles);
     File.WriteAllText(filename, jsonString);
 
-    await pubMedClient.GenerateArticleDataFile(articles);
+    await outputService!.GenerateArticleDataFile(articles);
 
     return articles;
 }

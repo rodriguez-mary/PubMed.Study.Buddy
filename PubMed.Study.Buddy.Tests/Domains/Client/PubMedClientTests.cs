@@ -35,7 +35,7 @@ public class PubMedClientTests
         var client = new PubMedClient(NullLogger<PubMedClient>.Instance, searchServiceMock.Object,
             scoringServiceMock.Object, GivenIHaveOutputServiceMock().Object, GivenIHaveAFlashCardServiceMock().Object);
 
-        var result = await client.FindArticles([new ArticleFilter()]);
+        var result = await client.GetArticles([new ArticleFilter()]);
 
         Assert.IsNotNull(result);
         Assert.AreEqual(articlesToReturn.Count, result.Count);
@@ -52,7 +52,7 @@ public class PubMedClientTests
         var client = new PubMedClient(NullLogger<PubMedClient>.Instance, searchServiceMock.Object,
             scoringServiceMock.Object, GivenIHaveOutputServiceMock().Object, GivenIHaveAFlashCardServiceMock().Object);
 
-        _ = await client.FindArticles([new ArticleFilter()]);
+        _ = await client.GetArticles([new ArticleFilter()]);
 
         searchServiceMock.Verify(s => s.FindArticles(It.IsAny<ArticleFilter>()), Times.Once);   //called once per filter
         scoringServiceMock.Verify(s => s.GetImpactScore(It.IsAny<Article>()), Times.Exactly(articlesToReturn.Count));  //called once per article returned
@@ -69,7 +69,7 @@ public class PubMedClientTests
         var client = new PubMedClient(NullLogger<PubMedClient>.Instance, searchServiceMock.Object,
             scoringServiceMock.Object, GivenIHaveOutputServiceMock().Object, GivenIHaveAFlashCardServiceMock().Object);
 
-        var result = await client.FindArticles([new ArticleFilter()]);
+        var result = await client.GetArticles([new ArticleFilter()]);
 
         Assert.IsNotNull(result);
         Assert.AreEqual(1, result.Count);

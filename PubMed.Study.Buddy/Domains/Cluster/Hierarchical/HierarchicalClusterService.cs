@@ -1,242 +1,297 @@
-﻿using PubMed.Study.Buddy.DTOs;
-using System.Text;
+﻿using PubMed.Study.Buddy.Domains.Cluster.Hierarchical.Models;
+using PubMed.Study.Buddy.DTOs;
 
 namespace PubMed.Study.Buddy.Domains.Cluster.Hierarchical;
 
-public class HierarchicalClusterService(IReadOnlyDictionary<string, MeshTerm> meshTerms) : IClusterService
+/// <summary>
+/// Groups articles BY their mesh terms. Hierarchically clusters them based on the mesh term taxonomy.
+/// </summary>
+public class HierarchicalClusterService : IClusterService
 {
-    //this is the size at which we deem a cluster sufficiently large
-    private const int MinClusterSize = 10;
+    private const int MinClusterSize = 10;     // any selected cluster should have a minimum of this number of articles
+    private const int MinLineageDistance = 3;  // any selected cluster should have a minimum of these levels of lineage
 
-    // this defines how many unconnected terms we allow in the mesh terms. this allows for articles to match even if all their terms don't connect to each other
-    private const double MaxUnconnectedPercentage = .25;
+    private readonly Dictionary<string, MeshTerm> _meshTermsByTreeNumber = [];
+    private readonly IReadOnlyDictionary<string, MeshTerm> _meshTermsById;
 
-    private const int MaxDistance = 1000;
-    private Dictionary<string, int> _matrixKeys = [];
-    private int[,] _distanceMatrix = new int[0, 0];
+    #region constructor
 
-    private readonly Utilities _utilities = new(meshTerms);
-
-    /// <summary>
-    /// Create a preprocessed distance matrix for all the mesh terms from the articles being clustered.
-    /// </summary>
-    private void Initialize(IEnumerable<Article> articles)
+    public HierarchicalClusterService(IReadOnlyDictionary<string, MeshTerm> meshTerms)
     {
-        var meshTermDict = new Dictionary<string, MeshTerm>();
-        foreach (var meshHeading in articles.Where(article => article.MajorTopicMeshHeadings != null).SelectMany(article => article.MajorTopicMeshHeadings!))
+        _meshTermsById = meshTerms;
+        foreach (var meshTerm in meshTerms.Values)
         {
-            meshTermDict.TryAdd(meshHeading.DescriptorId, meshHeading);
+            foreach (var treeNumber in meshTerm.TreeNumbers)
+            {
+                _meshTermsByTreeNumber.TryAdd(treeNumber, meshTerm);
+            }
         }
-
-        var meshTerms = meshTermDict.Values.ToList();
-
-        _matrixKeys = [];
-
-        var index = 0;
-        foreach (var meshTerm in meshTerms)
-        {
-            _matrixKeys[meshTerm.DescriptorId] = index;
-            index++;
-        }
-
-        _distanceMatrix = Utilities.CreateDistanceMatrix(meshTerms);
     }
 
-    public List<ArticleSet> ClusterArticles(List<Article> baseArticles)
+    #endregion constructor
+
+    public List<ArticleSet> ClusterArticles(List<Article> articles)
     {
-        var articles = GetArticles(baseArticles, []);// ["38318920", "31016746", "37116877", "35137433", "34643954", "34590311", "33978435", "33587301", "33539210", "32974903", "32597736"]);
-        Initialize(articles);
+        // get the counts of articles relevent to each location in the mesh term taxonomy
+        var taxonomyCounts = Utilities.GetTaxonomyCounts(articles);
 
-        var matrix = GetArticleDistanceMatrix(articles);
-        var clusters = ClusterArticles(articles, matrix);
+        // group all articles by their mesh terms
+        var articlesByMeshTermId = ArticlesByMeshTermId(taxonomyCounts, articles);
 
-        // deduplicate the clusters
-        var deduplicatedClusters = new List<ArticleSet>();
+        // remove articles if they're overrepresented in clusters where they're unnecessary
+        var clusters = DeduplicateClusters(articlesByMeshTermId);
+
+        // create the article sets from the clusters
+        var clusteredList = new List<ArticleSet>();
         foreach (var cluster in clusters)
         {
-            if (deduplicatedClusters.Contains(cluster)) continue;
-            deduplicatedClusters.Add(cluster);
+            if (cluster.Value.Count <= 0) continue;
+
+            clusteredList.Add(new ArticleSet()
+            {
+                Articles = cluster.Value,
+                Name = _meshTermsById[cluster.Key].DescriptorName
+            });
         }
 
-        // cluster article sets that have the same name
-        var clustersByName = new Dictionary<string, ArticleSet>();
-        foreach (var cluster in deduplicatedClusters)
-        {
-            if (!clustersByName.ContainsKey(cluster.Name))
-                clustersByName.Add(cluster.Name, new ArticleSet { Name = cluster.Name });
-
-            clustersByName[cluster.Name].Articles.AddRange(cluster.Articles);
-        }
-        var clustersList = clustersByName.Values.ToList();
-
-        using var sw = new StreamWriter(@"c:\temp\studybuddy\hierarchical.csv", false, Encoding.UTF8);
-        sw.WriteLine("articles,cluster name,articles");
-        foreach (var cluster in clustersList)
-        {
-            var a = cluster.Articles;
-            sw.WriteLine($"{a.Count},{cluster.Name.Replace(",", "")},{string.Join(",", a)}");
-        }
-
-        return clustersList;
+        return clusteredList;
     }
 
-    private List<ArticleSet> ClusterArticles(List<Article> articles, int[,] matrix)
+    /// <summary>
+    /// Gets a list of all articles by their best match mesh terms
+    /// </summary>
+    private Dictionary<string, List<Article>> ArticlesByMeshTermId(Dictionary<string, TaxonomyCount> taxonomyCounts, List<Article> articles)
     {
-        var maxMeshTerms = 0;
+        var articlesByMeshTermId = new Dictionary<string, List<Article>>();
         foreach (var article in articles)
         {
-            if (article.MajorTopicMeshHeadings?.Count > maxMeshTerms)
-                maxMeshTerms = article.MajorTopicMeshHeadings.Count;
-        }
+            var bestTreeNumbers = BestFitTreeNumbers(taxonomyCounts, article);
 
-        var clusterDict = new Dictionary<int, ArticleSet>();
-        for (var i = 0; i < matrix.GetLength(0); i++)
-            clusterDict.Add(i, new ArticleSet());
-
-        // basically, we have our list of articles that need to be clustered (articleKeys)
-        // we iteratively loop through all the articles and cluster them by increasing distances
-        // if they meet the requirement of min size
-        // then we pull them from the list that needs to be clustered
-        var colLength = matrix.GetLength(1);
-        var currentMaxDistance = 0;
-        while (currentMaxDistance <= maxMeshTerms * MaxDistance)
-        {
-            foreach (var (pos, cluster) in clusterDict)
+            foreach (var number in bestTreeNumbers)
             {
-                if (cluster.Articles.Count >= MinClusterSize) continue;
-
-                var posMaxDistance = Math.Round(articles[pos].MajorTopicMeshHeadings?.Count ?? 0 * MaxUnconnectedPercentage) * MaxDistance;
-                if (currentMaxDistance > posMaxDistance) continue;
-
-                for (var i = 0; i < colLength; i++)
+                if (!_meshTermsByTreeNumber.ContainsKey(number))
                 {
-                    // we require at least 50% of the terms be connected
-                    // we know that there are unconnected terms for every 1k in the distance
-                    // so, if we're in unconnected term territory then we need to make sure it's less than the allowed percentage
-                    var iMaxDistance = Math.Round(articles[i].MajorTopicMeshHeadings?.Count ?? 0 * MaxUnconnectedPercentage) * MaxDistance;
-                    if (currentMaxDistance > iMaxDistance) continue;
-
-                    var distance = matrix[pos, i];
-                    if (distance == currentMaxDistance)  // == rather than <= to avoid adding the same article multiple times
-                    {
-                        cluster.Articles.Add(articles[i]);
-                        cluster.Distance = distance;
-                    }
+                    // write an error then move on
+                    Console.WriteLine($"Could not find mesh term for tree number {number}");
+                    continue;
                 }
-            }
 
-            currentMaxDistance++;
+                var meshTerm = _meshTermsByTreeNumber[number];
+
+                if (!articlesByMeshTermId.ContainsKey(meshTerm.DescriptorId))
+                    articlesByMeshTermId.Add(meshTerm.DescriptorId, new List<Article>());
+
+                articlesByMeshTermId[meshTerm.DescriptorId].Add(article);
+            }
         }
 
-        //write out distance matrix to eyeball
-        using var sw = new StreamWriter(@"c:\temp\studybuddy\distance_matrix.csv", false, Encoding.UTF8);
+        return articlesByMeshTermId;
+    }
 
-        var header = "";
-        for (var i = 0; i < articles.Count; i++)
-            header += $",{articles[i].Id}";
+    /*
+     *  for every article
+     *   - cluster it into the smallest tree number that has a count of > Min cluster count
+     *   - if there are ties, prefer the one that is at the most specific level (most dots)
+     *   - if still tied, add all that are tied
+     *
+     *   - if there is nothing that exceeds 3, add the biggest one that has at least 3 level of specificity
+     */
 
-        sw.WriteLine(header);
+    private List<string> BestFitTreeNumbers(Dictionary<string, TaxonomyCount> taxonomyCounts, Article article)
+    {
+        var lineage = Utilities.ArticleLineage(article);
 
-        for (var i = 0; i < articles.Count; i++)
+        var articleTaxonomyCounts = taxonomyCounts.Where(x => lineage.Contains(x.Key));
+
+        var validSize = new List<string>();
+        var descendingComparer = Comparer<int>.Create((x, y) => y.CompareTo(x));
+        var validSpecificity = new SortedList<int, List<string>>(descendingComparer);  //needs to be a sorted list so we can select the first value
+
+        foreach (var (k, v) in articleTaxonomyCounts)
         {
-            sw.Write($"{articles[i].Id}");
-            for (var j = 0; j < articles.Count; j++)
+            if (v.Count >= MinClusterSize)
             {
-                var x = matrix[i, j];
-                sw.Write($",{x}");
+                validSize.Add(k);
             }
 
-            sw.WriteLine();
-        }
-
-        var clusters = clusterDict.Values.ToList();
-
-        foreach (var cluster in clusters)
-        {
-            cluster.Name = _utilities.DetermineClusterName(cluster.Articles);
-        }
-
-        return clusters;
-    }
-
-    private List<Article> GetArticles(List<Article> baseArticles, List<string> ids)
-    {
-        if (ids.Count == 0) return baseArticles;
-
-        var articles = new List<Article>();
-        foreach (var art in baseArticles)
-        {
-            if (ids.Contains(art.Id))
-                articles.Add(art);
-        }
-
-        return articles;
-    }
-
-    private int[,] GetArticleDistanceMatrix(IReadOnlyList<Article> articles)
-    {
-        var size = articles.Count;
-        var matrix = new int[size, size];
-
-        for (var i = 0; i < articles.Count; i++)
-        {
-            matrix[i, i] = 0;
-            for (var j = i + 1; j < articles.Count; j++)
+            var depth = k.Count(x => x == '.') + 1;  // todo centralize depth count
+            if (depth >= MinLineageDistance)
             {
-                var distance = ArticleDistance(articles[i], articles[j]);
-                matrix[i, j] = distance;
-                matrix[j, i] = distance;
+                if (!validSpecificity.ContainsKey(v.Count))
+                    validSpecificity.Add(v.Count, new List<string>());
+                validSpecificity[v.Count].Add(k);
             }
         }
 
-        return matrix;
+        // do we prefer more specific or bigger?
+        if (validSize.Count > 0)
+            return SelectMostSpecific(validSize);
+
+        if (validSpecificity.Count > 0)
+            return validSpecificity.First().Value;
+
+        //todo throw error - what kind of bullshit is this?
+        return lineage;
     }
 
-    private int ArticleDistance(Article article1, Article article2)
+    private List<string> SelectMostSpecific(List<string> validSize)
     {
-        var list1 = article1.MajorTopicMeshHeadings;
-        var list2 = article2.MajorTopicMeshHeadings;
+        var mostSpecific = new List<string>();
 
-        if (list1 == null || list2 == null) return MaxDistance;
-        if (list1.Count == 0 || list2.Count == 0) return MaxDistance;
+        if (validSize.Count <= 0) return mostSpecific; //todo: maybe throw error?
 
-        return ArticleListDistance(list1, list2) + ArticleListDistance(list2, list1);
+        if (validSize.Count == 1)
+        {
+            mostSpecific.Add(validSize.First());
+            return mostSpecific;
+        }
+
+        var maxLineage = 0;
+        foreach (var item in validSize)
+        {
+            var lineageCount = item.Count(x => x == '.');
+            if (lineageCount > maxLineage)
+            {
+                maxLineage = lineageCount;
+
+                mostSpecific.Clear();
+                mostSpecific.Add(item);
+            }
+            else if (lineageCount == maxLineage)
+            {
+                mostSpecific.Add(item);
+            }
+        }
+
+        return mostSpecific;
     }
 
     /// <summary>
-    /// Calculate the distance it takes for all of listA to get to any of listB.
+    /// Analyze clusters for duplicates and remove duplicated articles from "worse" clusters.
+    /// The best clusters are smaller and more specific.
     /// </summary>
-    private int ArticleListDistance(List<MeshTerm> listA, List<MeshTerm> listB)
+    private Dictionary<string, List<Article>> DeduplicateClusters(Dictionary<string, List<Article>> articlesByMeshTermId)
     {
-        // we need to determine the minimum distance for every descriptor on that article
-        // to ANY descriptor on the other article
-        var distance = 0;
-        foreach (var meshTermA in listA)
+        var deduplicatedClusters = articlesByMeshTermId.ToDictionary(entry => entry.Key, entry => new List<Article>(entry.Value));
+        var groupingsPerArticle = new Dictionary<string, List<string>>();
+
+        foreach (var (meshTermId, articles) in articlesByMeshTermId)
         {
-            // get the index for
-            if (!_matrixKeys.TryGetValue(meshTermA.DescriptorId, out var meshAIndex))
+            foreach (var article in articles)
             {
-                distance += MaxDistance;
-                continue;
+                if (!groupingsPerArticle.ContainsKey(article.Id))
+                    groupingsPerArticle.Add(article.Id, new List<string>());
+
+                groupingsPerArticle[article.Id].Add(meshTermId);
             }
-
-            var minDistance = MaxDistance;
-            // get the minimum distance to any of the other descriptors
-            foreach (var meshTermB in listB)
-            {
-                if (!_matrixKeys.TryGetValue(meshTermB.DescriptorId, out var meshBIndex))
-                    continue;
-
-                var thisDistance = _distanceMatrix[meshAIndex, meshBIndex];
-                if (thisDistance < minDistance) minDistance = thisDistance;
-
-                if (minDistance == 0) break;
-            }
-
-            // add that min distance to the total
-            distance += minDistance;
         }
 
-        return distance;
+        foreach (var (articleId, meshTerms) in groupingsPerArticle)
+        {
+            var extraneousTerms = ExtraneousMeshTerms(meshTerms, articlesByMeshTermId);
+
+            foreach (var extraneousTerm in extraneousTerms)
+            {
+                // kinda janked. should extract the remove into it's own function
+                // but this will work for now because of the IEquatable override in Article
+                var article = new Article { Id = articleId };
+
+                if (!deduplicatedClusters.ContainsKey(extraneousTerm) || !deduplicatedClusters[extraneousTerm].Contains(article)) continue;
+
+                deduplicatedClusters[extraneousTerm].Remove(article);
+            }
+        }
+
+        return deduplicatedClusters;
+    }
+
+    // return unnecessary mesh terms
+    // these are any terms where there are more specific terms
+    // or, for equal specificity, larger article sets associated with the terms
+    private List<string> ExtraneousMeshTerms(List<string> meshTermIds, Dictionary<string, List<Article>> articlesByMeshTermId)
+    {
+        var extraneousTerms = new List<string>();
+        if (meshTermIds.Count <= 1) return extraneousTerms;
+
+        var maxDepth = 0;
+        var maxDepthTerms = new List<string>();
+
+        foreach (var meshTermId in meshTermIds)
+        {
+            var depth = MeshTermDepth(meshTermId);
+            if (depth > maxDepth)
+            {
+                // set the new max depth
+                maxDepth = depth;
+
+                // add the old max depth terms to the extraneous terms
+                extraneousTerms.AddRange(maxDepthTerms);
+
+                // start tracking the new max depth terms
+                maxDepthTerms.Clear();
+                maxDepthTerms.Add(meshTermId);
+            }
+            else if (depth == maxDepth)
+            {
+                maxDepthTerms.Add(meshTermId);
+            }
+            else
+            {
+                extraneousTerms.Add(meshTermId);
+            }
+        }
+
+        if (maxDepthTerms.Count <= 1) return extraneousTerms;
+
+        var smallestSize = articlesByMeshTermId[maxDepthTerms.First()].Count;
+        var extraneousTermsForSize = new List<string>();
+        var smallestSizeTerms = new List<string>();
+        foreach (var term in maxDepthTerms)
+        {
+            var size = articlesByMeshTermId[term].Count;
+            if (size == 1)
+            {
+                extraneousTermsForSize.Add(term);
+            }
+            else if (size < smallestSize)
+            {
+                smallestSize = size;
+
+                extraneousTermsForSize.AddRange(smallestSizeTerms);
+
+                smallestSizeTerms.Clear();
+                smallestSizeTerms.Add(term);
+            }
+            else if (size == smallestSize)
+            {
+                smallestSizeTerms.Add(term);
+            }
+            else
+            {
+                extraneousTermsForSize.Add(term);
+            }
+        }
+
+        if (smallestSizeTerms.Count < 1) return extraneousTerms;
+
+        extraneousTerms.AddRange(extraneousTermsForSize);
+        return extraneousTerms;
+    }
+
+    private int MeshTermDepth(string meshTermId)
+    {
+        if (!_meshTermsById.ContainsKey(meshTermId)) return 0;
+
+        var meshTerm = _meshTermsById[meshTermId];
+
+        var maxDepth = 0;
+
+        foreach (var number in meshTerm.TreeNumbers)
+        {
+            var depth = number.Split(".").Length;
+            if (depth > maxDepth) maxDepth = depth;
+        }
+
+        return maxDepth;
     }
 }
