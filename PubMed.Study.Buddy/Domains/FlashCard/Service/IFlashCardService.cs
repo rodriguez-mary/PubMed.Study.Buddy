@@ -1,6 +1,6 @@
 ﻿using PubMed.Study.Buddy.DTOs;
 
-namespace PubMed.Study.Buddy.Domains.FlashCard;
+namespace PubMed.Study.Buddy.Domains.FlashCard.Service;
 
 public interface IFlashCardService
 {

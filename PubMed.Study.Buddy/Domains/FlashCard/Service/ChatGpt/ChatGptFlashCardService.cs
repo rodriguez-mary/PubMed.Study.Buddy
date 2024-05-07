@@ -1,10 +1,9 @@
 ﻿using PubMed.Study.Buddy.DTOs;
 
-namespace PubMed.Study.Buddy.Domains.FlashCard.ChatGpt;
+namespace PubMed.Study.Buddy.Domains.FlashCard.Service.ChatGpt;
 
 public class ChatGptFlashCardService : IFlashCardService
 {
-
     // cluster data
 
     // generate a set of flashcards proportional to each articles impact score in its cluster

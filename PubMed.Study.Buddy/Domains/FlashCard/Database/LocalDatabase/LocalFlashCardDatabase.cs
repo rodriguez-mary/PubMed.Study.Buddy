@@ -3,11 +3,11 @@ using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using PubMed.Study.Buddy.DTOs;
 
-namespace PubMed.Study.Buddy.Domains.FlashCard.LocalDatabase;
+namespace PubMed.Study.Buddy.Domains.FlashCard.Database.LocalDatabase;
 
 internal class LocalFlashCardDatabase(IAppCache cache, IConfiguration config) : IFlashCardDatabase
 {
-    private readonly string _filename = "flashcards";
+    private readonly string _filename = "flashCards.json";
     private readonly string _fileDirectory = config["localIoDirectory"] ?? Environment.CurrentDirectory;
 
     private readonly string _cacheKey = "LocalFlashCardDatabase_FlashCards";
@@ -41,7 +41,7 @@ internal class LocalFlashCardDatabase(IAppCache cache, IConfiguration config) : 
         foreach (var card in cardsToSave)
         {
             // if the card is already saved, don't resave (this ain't an updated program)
-            if (!cachedCards.Any(x => x.Id == card.Id)) continue;
+            if (cachedCards.Any(x => x.Id == card.Id)) continue;
 
             cachedCards.Add(card);
             // flag that the cache is now dirty

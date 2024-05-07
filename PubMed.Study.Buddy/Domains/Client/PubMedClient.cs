@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
-using PubMed.Study.Buddy.Domains.FlashCard;
+using PubMed.Study.Buddy.Domains.FlashCard.Service;
 using PubMed.Study.Buddy.Domains.ImpactScoring;
 using PubMed.Study.Buddy.Domains.Output;
 using PubMed.Study.Buddy.Domains.Search;

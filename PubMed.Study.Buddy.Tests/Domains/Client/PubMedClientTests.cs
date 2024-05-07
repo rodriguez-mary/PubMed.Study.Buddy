@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using PubMed.Study.Buddy.Domains.Client;
-using PubMed.Study.Buddy.Domains.FlashCard;
+using PubMed.Study.Buddy.Domains.FlashCard.Service;
 using PubMed.Study.Buddy.Domains.ImpactScoring;
 using PubMed.Study.Buddy.Domains.Output;
 using PubMed.Study.Buddy.Domains.Search;

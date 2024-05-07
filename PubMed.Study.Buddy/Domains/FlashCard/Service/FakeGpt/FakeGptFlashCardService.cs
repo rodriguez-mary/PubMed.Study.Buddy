@@ -1,6 +1,7 @@
-﻿using PubMed.Study.Buddy.DTOs;
+﻿using PubMed.Study.Buddy.Domains.FlashCard.Database;
+using PubMed.Study.Buddy.DTOs;
 
-namespace PubMed.Study.Buddy.Domains.FlashCard.FakeGpt;
+namespace PubMed.Study.Buddy.Domains.FlashCard.Service.FakeGpt;
 
 public class FakeGptFlashCardService(IFlashCardDatabase database) : IFlashCardService
 {
@@ -49,9 +50,10 @@ public class FakeGptFlashCardService(IFlashCardDatabase database) : IFlashCardSe
         {
             cards.Add(new Card
             {
+                Id = Guid.NewGuid(),
                 Question = $"Question #{i} for article {article.Id}",
-                Answer = $"Answer #{i} for articles {article.Id}",
-                Article = article
+                Answer = $"Answer #{i} for article {article.Id}",
+                ArticleId = article.Id
             });
         }
 
@@ -67,7 +69,7 @@ public class FakeGptFlashCardService(IFlashCardDatabase database) : IFlashCardSe
 
         foreach (var card in cardSet)
         {
-            var articleId = card.Article.Id;
+            var articleId = card.ArticleId;
             if (!cardsByArticleId.ContainsKey(articleId))
                 cardsByArticleId.Add(articleId, new List<Card>());
 

@@ -7,6 +7,6 @@ public class Card
     public string Question { get; set; } = string.Empty;
     public string Answer { get; set; } = string.Empty;
 
-    // the articles used to generate this flash card set
-    public Article Article { get; set; } = new();
+    // the article used to generate this flash card set
+    public string ArticleId { get; set; } = string.Empty;
 }
