@@ -52,12 +52,17 @@ public class PubMedClient(ILogger<PubMedClient> logger, IPubMedSearchService sea
         await outputService.GenerateArticleDataFile(articles);
     }
 
-    public async Task<List<List<Cards>>> GenerateFlashCards(List<ArticleSet> articleSets)
+    public async Task<List<CardSet>> GenerateFlashCards(List<ArticleSet> articleSets)
     {
-        var flashCardSets = new List<List<Cards>>();
+        var flashCardSets = new List<CardSet>();
         foreach (var articleSet in articleSets)
         {
-            flashCardSets.Add(await flashCardService.GetFlashCardSet(articleSet));
+            var cards = await flashCardService.GetFlashCardSet(articleSet);
+            flashCardSets.Add(new CardSet
+            {
+                Cards = cards,
+                Title = articleSet.Name
+            });
         }
 
         return flashCardSets;

@@ -10,5 +10,5 @@ public interface IPubMedClient
 
     Task GenerateArticleDataFile(List<Article> articles);
 
-    Task<List<List<Cards>>> GenerateFlashCards(List<ArticleSet> articles);
+    Task<List<CardSet>> GenerateFlashCards(List<ArticleSet> articles);
 }

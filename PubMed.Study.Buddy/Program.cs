@@ -7,7 +7,6 @@ using Polly.Extensions.Http;
 using PubMed.Study.Buddy.Domains.Client;
 using PubMed.Study.Buddy.Domains.Cluster.Hierarchical;
 using PubMed.Study.Buddy.Domains.FlashCard;
-using PubMed.Study.Buddy.Domains.FlashCard.ChatGpt;
 using PubMed.Study.Buddy.Domains.FlashCard.FakeGpt;
 using PubMed.Study.Buddy.Domains.FlashCard.LocalDatabase;
 using PubMed.Study.Buddy.Domains.ImpactScoring;
@@ -44,6 +43,7 @@ builder.Services.AddSingleton<IOutputService, LocalIoService>();
 builder.Services.AddSingleton<IPubMedClient, PubMedClient>();
 builder.Services.AddSingleton<IFlashCardDatabase, LocalFlashCardDatabase>();
 builder.Services.AddSingleton<IFlashCardService, FakeGptFlashCardService>();
+builder.Services.AddLazyCache();
 
 var serviceProvider = builder.Services.BuildServiceProvider();
 
@@ -71,6 +71,10 @@ foreach (var cluster in clusters)
     var a = cluster.Articles;
     sw.WriteLine($"{a.Count},{cluster.Name.Replace(",", "")},{string.Join(",", a)}");
 }
+
+var cardSets = await pubMedClient.GenerateFlashCards(clusters);
+var cardSetsFileName = Path.Combine(@"c:\temp\studybuddy", "cardSets.json");
+SaveCardsToFile(cardSets, cardSetsFileName);
 
 return;
 
@@ -118,4 +122,9 @@ static async Task<List<Article>> LoadFromPubMed(IPubMedClient pubMedClient, stri
     await pubMedClient.GenerateArticleDataFile(articles);
 
     return articles;
+}
+static void SaveCardsToFile(List<CardSet> cards, string path)
+{
+    var json = JsonConvert.SerializeObject(cards, Formatting.Indented);
+    File.WriteAllText(path, json);
 }
