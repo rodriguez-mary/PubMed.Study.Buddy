@@ -22,7 +22,7 @@ public class JaccardSimilarityClusterService : IClusterService
                 var similarity = CalculateJaccardSimilarity(article1.MajorTopicMeshHeadings, article2.MajorTopicMeshHeadings);
                 if (similarity == 1)
                 {
-                    article1.MajorTopicMeshHeadings.Sort();
+                    article1.MajorTopicMeshHeadings!.Sort();
                     var key = string.Join(";", article1.MajorTopicMeshHeadings.Select(s => s.DescriptorId));
                     if (!similarityDict.ContainsKey(key))
                         similarityDict.Add(key, new List<string>());
