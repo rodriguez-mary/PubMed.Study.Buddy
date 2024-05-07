@@ -1,5 +1,4 @@
-﻿using System.Collections.ObjectModel;
-using PubMed.Study.Buddy.Domains.Search.EUtils;
+﻿using PubMed.Study.Buddy.Domains.Search.EUtils;
 using PubMed.Study.Buddy.Domains.Search.EUtils.Models;
 using PubMed.Study.Buddy.DTOs;
 using Author = PubMed.Study.Buddy.Domains.Search.EUtils.Models.Author;

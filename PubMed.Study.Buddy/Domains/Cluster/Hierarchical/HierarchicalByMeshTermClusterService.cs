@@ -1,6 +1,4 @@
 ﻿using PubMed.Study.Buddy.DTOs;
-using System.Reflection.Metadata.Ecma335;
-using System.Text;
 
 namespace PubMed.Study.Buddy.Domains.Cluster.Hierarchical;
 
@@ -8,6 +6,7 @@ public class HierarchicalByMeshTermClusterService : IClusterService
 {
     //this is the size at which we deem a cluster sufficiently large
     private const int MinClusterSize = 10;     //any selected clustre should have a minimum of this number of articles
+
     private const int MinLineageDistance = 3;  //any selected cluster should have a minimum of these levels of lineage
 
     private readonly Dictionary<string, MeshTerm> _meshTermsByTreeNumber = new();
@@ -31,9 +30,8 @@ public class HierarchicalByMeshTermClusterService : IClusterService
 
         var articlesByMeshTermId = ArticlesByMeshTermId(hierachyCount, articles);
 
-        var clusters =  DeduplicateClusters(articlesByMeshTermId);
+        var clusters = DeduplicateClusters(articlesByMeshTermId);
 
-        
         var clusteredList = new List<ArticleSet>();
         foreach (var cluster in clusters)
         {
@@ -47,19 +45,18 @@ public class HierarchicalByMeshTermClusterService : IClusterService
         }
 
         return clusteredList;
-
     }
 
     //analyze clusters for duplicates and remove duplicated articles from "worse" clusters
     //the best clusters are smaller and more specific
-    private Dictionary<string, List<Article>> DeduplicateClusters(Dictionary<string, List<Article>> articlesByMeshTermId) 
+    private Dictionary<string, List<Article>> DeduplicateClusters(Dictionary<string, List<Article>> articlesByMeshTermId)
     {
         var deduplicatedClusters = articlesByMeshTermId.ToDictionary(entry => entry.Key, entry => new List<Article>(entry.Value));
         var groupingsPerArticle = new Dictionary<string, List<string>>();
 
         foreach (var (meshTermId, articles) in articlesByMeshTermId)
         {
-            foreach(var article in articles)
+            foreach (var article in articles)
             {
                 if (!groupingsPerArticle.ContainsKey(article.Id))
                     groupingsPerArticle.Add(article.Id, new List<string>());
@@ -72,7 +69,7 @@ public class HierarchicalByMeshTermClusterService : IClusterService
         {
             var extraneousTerms = ExtraneousMeshTerms(meshTerms, articlesByMeshTermId);
 
-            foreach(var extraneousTerm in extraneousTerms)
+            foreach (var extraneousTerm in extraneousTerms)
             {
                 // kinda janked. should extract the remove into it's own function
                 // but this will work for now because of the IEquatable override in Article
@@ -112,7 +109,6 @@ public class HierarchicalByMeshTermClusterService : IClusterService
                 // start tracking the new max depth terms
                 maxDepthTerms.Clear();
                 maxDepthTerms.Add(meshTermId);
-
             }
             else if (depth == maxDepth)
             {
@@ -161,7 +157,6 @@ public class HierarchicalByMeshTermClusterService : IClusterService
         return extraneousTerms;
     }
 
-
     private int MeshTermDepth(string meshTermId)
     {
         if (!_meshTermsById.ContainsKey(meshTermId)) return 0;
@@ -170,7 +165,7 @@ public class HierarchicalByMeshTermClusterService : IClusterService
 
         var maxDepth = 0;
 
-        foreach(var number in meshTerm.TreeNumbers)
+        foreach (var number in meshTerm.TreeNumbers)
         {
             var depth = number.Split(".").Length;
             if (depth > maxDepth) maxDepth = depth;
@@ -178,7 +173,6 @@ public class HierarchicalByMeshTermClusterService : IClusterService
 
         return maxDepth;
     }
-
 
     /// <summary>
     /// Gets a list of all articles by their best match mesh terms
@@ -192,7 +186,6 @@ public class HierarchicalByMeshTermClusterService : IClusterService
 
             foreach (var number in bestTreeNumbers)
             {
-
                 if (!_meshTermsByTreeNumber.ContainsKey(number))
                 {
                     // write an error then move on
@@ -209,19 +202,18 @@ public class HierarchicalByMeshTermClusterService : IClusterService
             }
         }
 
-
         return articlesByMeshTermId;
     }
-
 
     /*
      *  for every article
      *   - cluster it into the smallest tree number that has a count of > Min cluster count
      *   - if there are ties, prefer the one that is at the most specific level (most dots)
      *   - if still tied, add all that are tied
-     *   
+     *
      *   - if there is nothing that exceeds 3, add the biggest one that has at least 3 level of specificity
      */
+
     private List<string> BestFitTreeNumbers(Dictionary<string, HierarchyCount> hierarchyCount, Article article)
     {
         var lineage = ArticleLineage(article);
@@ -232,7 +224,7 @@ public class HierarchicalByMeshTermClusterService : IClusterService
         var descendingComparer = Comparer<int>.Create((x, y) => y.CompareTo(x));
         var validSpecificity = new SortedList<int, List<string>>(descendingComparer);  //needs to be a sorted list so we can select the first value
 
-        foreach (var (k,v) in articleHierarchyCounts)
+        foreach (var (k, v) in articleHierarchyCounts)
         {
             if (v.Count >= MinClusterSize)
             {
@@ -274,7 +266,6 @@ public class HierarchicalByMeshTermClusterService : IClusterService
         var maxLineage = 0;
         foreach (var item in validSize)
         {
-
             var lineageCount = item.Count(x => x == '.');
             if (lineageCount > maxLineage)
             {
@@ -287,11 +278,9 @@ public class HierarchicalByMeshTermClusterService : IClusterService
             {
                 mostSpecific.Add(item);
             }
-
         }
 
         return mostSpecific;
-
     }
 
     // Creates a count of all the articles that could be rolled up to every particular hierarchy level
@@ -331,7 +320,7 @@ public class HierarchicalByMeshTermClusterService : IClusterService
                 var splitNumbers = treeNumber.Split(".");
                 for (var i = 0; i < splitNumbers.Length; i++)
                 {
-                    var number = string.Join(".", splitNumbers[..(i+1)]);
+                    var number = string.Join(".", splitNumbers[..(i + 1)]);
                     lineage.Add(number);
                 }
             }
@@ -340,11 +329,11 @@ public class HierarchicalByMeshTermClusterService : IClusterService
         return lineage;
     }
 
-
     private class HierarchyCount
     {
         // ease of access for sorting
-       public int Count { get { return ArticleIds.Count; } }
+        public int Count
+        { get { return ArticleIds.Count; } }
 
         public List<string> ArticleIds = [];
     }

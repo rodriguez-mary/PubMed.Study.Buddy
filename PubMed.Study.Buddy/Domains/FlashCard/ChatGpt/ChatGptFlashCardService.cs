@@ -4,7 +4,7 @@ namespace PubMed.Study.Buddy.Domains.FlashCard.ChatGpt;
 
 public class ChatGptFlashCardService : IFlashCardService
 {
-    public Task<FlashCardSet> GenerateFlashCards(ArticleSet articles)
+    public Task<List<Cards>> GenerateFlashCards(ArticleSet articles)
     {
         throw new NotImplementedException();
     }

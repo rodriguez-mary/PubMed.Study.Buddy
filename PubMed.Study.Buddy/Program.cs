@@ -8,6 +8,8 @@ using PubMed.Study.Buddy.Domains.Client;
 using PubMed.Study.Buddy.Domains.Cluster.Hierarchical;
 using PubMed.Study.Buddy.Domains.FlashCard;
 using PubMed.Study.Buddy.Domains.FlashCard.ChatGpt;
+using PubMed.Study.Buddy.Domains.FlashCard.FakeGpt;
+using PubMed.Study.Buddy.Domains.FlashCard.LocalDatabase;
 using PubMed.Study.Buddy.Domains.ImpactScoring;
 using PubMed.Study.Buddy.Domains.ImpactScoring.CitationNumber;
 using PubMed.Study.Buddy.Domains.Output;
@@ -40,7 +42,8 @@ builder.Services.AddHttpClient<IPubMedSearchService, EUtilsSearchService>()
 builder.Services.AddSingleton<IImpactScoringService, CitationNumberImpactScoringService>();
 builder.Services.AddSingleton<IOutputService, LocalIoService>();
 builder.Services.AddSingleton<IPubMedClient, PubMedClient>();
-builder.Services.AddSingleton<IFlashCardService, ChatGptFlashCardService>();
+builder.Services.AddSingleton<IFlashCardDatabase, LocalFlashCardDatabase>();
+builder.Services.AddSingleton<IFlashCardService, FakeGptFlashCardService>();
 
 var serviceProvider = builder.Services.BuildServiceProvider();
 
@@ -60,7 +63,6 @@ var meshTerms = await pubMedClient.GetMeshTerms();
 Console.WriteLine("Clustering...");
 var clustering = new HierarchicalByMeshTermClusterService(meshTerms);
 var clusters = clustering.ClusterArticles(articles);
-
 
 using var sw = new StreamWriter($@"c:\temp\studybuddy\{clustering.GetType().Name}.csv", false, Encoding.UTF8);
 sw.WriteLine("articles,cluster name,articles");

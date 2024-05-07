@@ -1,8 +1,8 @@
-﻿using System.Text;
-using Aglomera;
+﻿using Aglomera;
 using Aglomera.Evaluation.Internal;
 using Aglomera.Linkage;
 using PubMed.Study.Buddy.DTOs;
+using System.Text;
 
 namespace PubMed.Study.Buddy.Domains.Cluster.Agglomerative;
 

@@ -23,7 +23,6 @@ public class LocalIoService(ILogger<LocalIoService> logger, IConfiguration confi
         return Task.CompletedTask;
     }
 
-
     private void EnsureFilePathCreated()
     {
         if (!Directory.Exists(_fileDirectory))

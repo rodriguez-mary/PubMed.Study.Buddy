@@ -4,7 +4,6 @@ using Newtonsoft.Json;
 using PubMed.Study.Buddy.Domains.Search.EUtils.Models;
 using PubMed.Study.Buddy.Domains.Search.Exceptions;
 using PubMed.Study.Buddy.DTOs;
-using System.IO;
 
 namespace PubMed.Study.Buddy.Domains.Search.EUtils;
 
