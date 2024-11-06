@@ -56,6 +56,9 @@ internal class LocalFlashCardDatabase(IAppCache cache, IConfiguration config) : 
 
     public Task SaveFlashCards()
     {
+        //nothing to save
+        if (_cardsByArticle == null) return Task.CompletedTask;
+
         var cards = new List<Card>();
 
         foreach (var cardList in _cardsByArticle.Values)

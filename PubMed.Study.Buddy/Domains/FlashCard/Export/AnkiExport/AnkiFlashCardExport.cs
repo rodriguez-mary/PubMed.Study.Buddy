@@ -6,7 +6,7 @@ namespace PubMed.Study.Buddy.Domains.FlashCard.Export.AnkiExport;
 
 internal class AnkiFlashCardExport : IFlashCardExport
 {
-    public async Task CreateExport(List<CardSet> sets)
+    public async Task<(Stream, string extension)> CreateExport(List<CardSet> sets)
     {
         var (collection, noteTypeId) = CreateCollection(CreateNoteType());
 
@@ -15,11 +15,9 @@ internal class AnkiFlashCardExport : IFlashCardExport
             CreateDeck(set, collection, noteTypeId);
         }
 
-        /*var memoryStream = new MemoryStream();
+        var memoryStream = new MemoryStream();
         await AnkiFileWriter.WriteToStreamAsync(memoryStream, collection);
-        return (memoryStream, "apkg");*/
-
-        await AnkiFileWriter.WriteToFileAsync(@"c:\temp\studybuddy\flashCardExport.apkg", collection);
+        return (memoryStream, "apkg");
     }
 
     private void CreateDeck(CardSet set, AnkiCollection collection, long noteTypeId)

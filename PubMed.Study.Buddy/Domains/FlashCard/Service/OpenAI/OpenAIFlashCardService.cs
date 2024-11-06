@@ -47,7 +47,7 @@ public class OpenAIFlashCardService : IFlashCardService
                 }
                 else
                 {
-                    /*
+                    /* TODO uncomment when you're feeling good about this
                     var card = await GenerateFlashCard(assistant, api, article);
                     cards.Add(card);
                     await _flashCardDatabase.AddFlashCards(new List<Card> { card });*/

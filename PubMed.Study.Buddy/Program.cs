@@ -84,19 +84,16 @@ sw.Close();
 
 Console.WriteLine("Generating flash cards...");
 
-var cardsFilename = Path.Combine(@"c:\temp\studybuddy", "cardSets.json");
-var cardSets = await LoadFlashCardsFromFile(cardsFilename); //pubMedClient.GenerateFlashCards(clusters);
-//SaveCardsToFile(cardSets, cardsFilename);
-
-//await flashCardDatabase.SaveFlashCards();
+var cardSets = await pubMedClient.GenerateFlashCards(clusters);
+await flashCardDatabase.SaveFlashCards();
 
 Console.WriteLine("Generating Anki decks...");
-await flashCardExport.CreateExport(cardSets);
-/*using (stream)
+var (stream, extension) = await flashCardExport.CreateExport(cardSets);
+using (stream)
 using (var fileStream = new FileStream($@"c:\temp\studybuddy\flashCardExport.{extension}", FileMode.Create))
 {
     stream.CopyTo(fileStream);
-}*/
+}
 
 return;
 
@@ -149,9 +146,4 @@ async Task<List<Article>> LoadFromPubMed(IPubMedClient pubMedClient, string file
     await outputService!.GenerateArticleDataFile(articles);
 
     return articles;
-}
-static void SaveCardsToFile(List<CardSet> cards, string path)
-{
-    var json = JsonConvert.SerializeObject(cards, Formatting.Indented);
-    File.WriteAllText(path, json);
 }
