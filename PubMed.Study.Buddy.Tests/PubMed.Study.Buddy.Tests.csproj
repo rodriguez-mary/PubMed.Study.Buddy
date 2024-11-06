@@ -10,6 +10,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Domains\FlashCard\**" />
+    <EmbeddedResource Remove="Domains\FlashCard\**" />
+    <None Remove="Domains\FlashCard\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.6.0" />
     <PackageReference Include="Moq" Version="4.20.70" />
     <PackageReference Include="MSTest.TestAdapter" Version="3.0.4" />
@@ -24,7 +30,6 @@
 
   <ItemGroup>
     <Folder Include="Domains\Client\Output\" />
-    <Folder Include="Domains\FlashCard\" />
   </ItemGroup>
 
 </Project>

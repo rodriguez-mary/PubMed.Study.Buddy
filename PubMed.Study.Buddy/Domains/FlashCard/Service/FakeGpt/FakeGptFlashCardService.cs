@@ -57,7 +57,7 @@ public class FakeGptFlashCardService(IFlashCardDatabase database) : IFlashCardSe
             });
         }
 
-        database.SaveFlashCards(cards);
+        database.AddFlashCards(cards);
         return cards;
     }
 

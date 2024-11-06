@@ -3,6 +3,7 @@ using PubMed.Study.Buddy.Domains.FlashCard.Service;
 using PubMed.Study.Buddy.Domains.ImpactScoring;
 using PubMed.Study.Buddy.Domains.Search;
 using PubMed.Study.Buddy.DTOs;
+using System.Collections.Generic;
 
 namespace PubMed.Study.Buddy.Domains.Client;
 

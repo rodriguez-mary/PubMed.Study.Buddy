@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Aglomera;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
@@ -8,7 +9,10 @@ using PubMed.Study.Buddy.Domains.Client;
 using PubMed.Study.Buddy.Domains.Cluster.Hierarchical;
 using PubMed.Study.Buddy.Domains.FlashCard.Database;
 using PubMed.Study.Buddy.Domains.FlashCard.Database.LocalDatabase;
+using PubMed.Study.Buddy.Domains.FlashCard.Export;
+using PubMed.Study.Buddy.Domains.FlashCard.Export.AnkiExport;
 using PubMed.Study.Buddy.Domains.FlashCard.Service;
+using PubMed.Study.Buddy.Domains.FlashCard.Service.ChatGpt;
 using PubMed.Study.Buddy.Domains.FlashCard.Service.FakeGpt;
 using PubMed.Study.Buddy.Domains.ImpactScoring;
 using PubMed.Study.Buddy.Domains.ImpactScoring.CitationNumber;
@@ -43,7 +47,8 @@ builder.Services.AddSingleton<IImpactScoringService, CitationNumberImpactScoring
 builder.Services.AddSingleton<IOutputService, LocalIoService>();
 builder.Services.AddSingleton<IPubMedClient, PubMedClient>();
 builder.Services.AddSingleton<IFlashCardDatabase, LocalFlashCardDatabase>();
-builder.Services.AddSingleton<IFlashCardService, FakeGptFlashCardService>();
+builder.Services.AddSingleton<IFlashCardService, OpenAIFlashCardService>();
+builder.Services.AddSingleton<IFlashCardExport, AnkiFlashCardExport>();
 builder.Services.AddLazyCache();
 
 var serviceProvider = builder.Services.BuildServiceProvider();
@@ -52,12 +57,14 @@ var serviceProvider = builder.Services.BuildServiceProvider();
 
 var pubMedClient = serviceProvider.GetRequiredService<IPubMedClient>();
 var outputService = serviceProvider.GetService<IOutputService>();
+var flashCardDatabase = serviceProvider.GetService<IFlashCardDatabase>();
+var flashCardExport = serviceProvider.GetService<IFlashCardExport>();
 
 // get the list of articles
-var filename = Path.Combine(@"c:\temp\studybuddy", "articles.json");
+var articlesFilename = Path.Combine(@"c:\temp\studybuddy", "articles.json");
 //var vetSurgeryMeshTerms = new List<List<string>> { new() { "Q000662" }, new() { "D013502", "Q000601" }, new() { "D004285", "D002415" } };
 var vetSurgeryMeshTerms = new List<List<string>> { new() { "veterinary" }, new() { "surgery" }, new() { "dogs", "cats" } };
-var articles = File.Exists(filename) ? await LoadArticlesFromFile(filename) : await LoadFromPubMed(pubMedClient, filename, vetSurgeryMeshTerms);
+var articles = File.Exists(articlesFilename) ? await LoadArticlesFromFile(articlesFilename) : await LoadFromPubMed(pubMedClient, articlesFilename, vetSurgeryMeshTerms);
 
 // cluster the articles
 Console.WriteLine("Getting mesh terms");
@@ -73,10 +80,23 @@ foreach (var cluster in clusters)
     var a = cluster.Articles;
     sw.WriteLine($"{a.Count},{cluster.Name.Replace(",", "")},{string.Join(",", a)}");
 }
+sw.Close();
 
-var cardSets = await pubMedClient.GenerateFlashCards(clusters);
-var cardSetsFileName = Path.Combine(@"c:\temp\studybuddy", "cardSets.json");
-SaveCardsToFile(cardSets, cardSetsFileName);
+Console.WriteLine("Generating flash cards...");
+
+var cardsFilename = Path.Combine(@"c:\temp\studybuddy", "cardSets.json");
+var cardSets = await LoadFlashCardsFromFile(cardsFilename); //pubMedClient.GenerateFlashCards(clusters);
+//SaveCardsToFile(cardSets, cardsFilename);
+
+//await flashCardDatabase.SaveFlashCards();
+
+Console.WriteLine("Generating Anki decks...");
+await flashCardExport.CreateExport(cardSets);
+/*using (stream)
+using (var fileStream = new FileStream($@"c:\temp\studybuddy\flashCardExport.{extension}", FileMode.Create))
+{
+    stream.CopyTo(fileStream);
+}*/
 
 return;
 
@@ -91,8 +111,14 @@ static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
 
 static async Task<List<Article>> LoadArticlesFromFile(string filename)
 {
-    Console.WriteLine("Loading from file");
+    Console.WriteLine("Loading articles from file");
     return JsonConvert.DeserializeObject<List<Article>>(await File.ReadAllTextAsync(filename)) ?? [];
+}
+
+static async Task<List<CardSet>> LoadFlashCardsFromFile(string filename)
+{
+    Console.WriteLine("Loading flash cards from file");
+    return JsonConvert.DeserializeObject<List<CardSet>>(await File.ReadAllTextAsync(filename)) ?? [];
 }
 async Task<List<Article>> LoadFromPubMed(IPubMedClient pubMedClient, string filename, List<List<string>> meshTerms)
 {

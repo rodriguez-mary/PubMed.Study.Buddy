@@ -6,5 +6,9 @@ public interface IFlashCardDatabase
 {
     Task<List<Card>> LoadFlashCards();
 
-    Task SaveFlashCards(List<Card> cards);
+    List<Card> RetrieveCardsForArticle(string articleId);
+
+    Task AddFlashCards(List<Card> flashCards);
+
+    Task SaveFlashCards();
 }

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using PubMed.Study.Buddy.Domains.Client;
+using PubMed.Study.Buddy.Domains.FlashCard.Database;
 using PubMed.Study.Buddy.Domains.FlashCard.Service;
 using PubMed.Study.Buddy.Domains.ImpactScoring;
 using PubMed.Study.Buddy.Domains.Output;
@@ -18,7 +19,6 @@ public class PubMedClientTests
         Assert.IsNotNull(new PubMedClient(NullLogger<PubMedClient>.Instance,
             GivenIHaveAPubMedSearchServiceMock([]).Object,
             GivenIHaveAnImpactScoringServiceMock().Object,
-            GivenIHaveOutputServiceMock().Object,
             GivenIHaveAFlashCardServiceMock().Object));
     }
 
@@ -33,7 +33,7 @@ public class PubMedClientTests
         var scoringServiceMock = GivenIHaveAnImpactScoringServiceMock();
 
         var client = new PubMedClient(NullLogger<PubMedClient>.Instance, searchServiceMock.Object,
-            scoringServiceMock.Object, GivenIHaveOutputServiceMock().Object, GivenIHaveAFlashCardServiceMock().Object);
+            scoringServiceMock.Object, GivenIHaveAFlashCardServiceMock().Object);
 
         var result = await client.GetArticles([new ArticleFilter()]);
 
@@ -50,7 +50,7 @@ public class PubMedClientTests
         var scoringServiceMock = GivenIHaveAnImpactScoringServiceMock();
 
         var client = new PubMedClient(NullLogger<PubMedClient>.Instance, searchServiceMock.Object,
-            scoringServiceMock.Object, GivenIHaveOutputServiceMock().Object, GivenIHaveAFlashCardServiceMock().Object);
+            scoringServiceMock.Object, GivenIHaveAFlashCardServiceMock().Object);
 
         _ = await client.GetArticles([new ArticleFilter()]);
 
@@ -67,7 +67,7 @@ public class PubMedClientTests
         var scoringServiceMock = GivenIHaveAnImpactScoringServiceMock();
 
         var client = new PubMedClient(NullLogger<PubMedClient>.Instance, searchServiceMock.Object,
-            scoringServiceMock.Object, GivenIHaveOutputServiceMock().Object, GivenIHaveAFlashCardServiceMock().Object);
+            scoringServiceMock.Object, GivenIHaveAFlashCardServiceMock().Object);
 
         var result = await client.GetArticles([new ArticleFilter()]);
 
@@ -76,25 +76,6 @@ public class PubMedClientTests
     }
 
     #endregion FindArticles
-
-    #region GenerateContent
-
-    [TestMethod]
-    public async Task GenerateContent_CallsOutputService()
-    {
-        var outputServiceMock = GivenIHaveOutputServiceMock();
-        var client = new PubMedClient(NullLogger<PubMedClient>.Instance,
-            GivenIHaveAPubMedSearchServiceMock([]).Object,
-            GivenIHaveAnImpactScoringServiceMock().Object,
-            outputServiceMock.Object,
-            GivenIHaveAFlashCardServiceMock().Object);
-
-        await client.GenerateArticleDataFile([]);
-
-        outputServiceMock.Verify(o => o.GenerateArticleDataFile(It.IsAny<List<Article>>()), Times.Once);
-    }
-
-    #endregion GenerateContent
 
     #region steps
 
@@ -120,6 +101,11 @@ public class PubMedClientTests
     private static Mock<IFlashCardService> GivenIHaveAFlashCardServiceMock()
     {
         return new Mock<IFlashCardService>();
+    }
+
+    private static Mock<IFlashCardDatabase> GivenIHaveAFlashCardDatabaseMock()
+    {
+        return new Mock<IFlashCardDatabase>();
     }
 
     #endregion steps
