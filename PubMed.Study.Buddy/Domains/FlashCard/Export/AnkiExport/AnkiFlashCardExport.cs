@@ -1,6 +1,5 @@
 ﻿using AnkiNet;
 using PubMed.Study.Buddy.DTOs;
-using System.Text;
 
 namespace PubMed.Study.Buddy.Domains.FlashCard.Export.AnkiExport;
 

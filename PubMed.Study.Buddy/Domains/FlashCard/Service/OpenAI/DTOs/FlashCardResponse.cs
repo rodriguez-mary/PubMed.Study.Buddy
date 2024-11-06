@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace PubMed.Study.Buddy.Domains.FlashCard.Service.ChatGpt;
+namespace PubMed.Study.Buddy.Domains.FlashCard.Service.OpenAI.DTOs;
 
 internal class FlashCardResponse
 {

@@ -1,4 +1,5 @@
-﻿using PubMed.Study.Buddy.DTOs;
+﻿using PubMed.Study.Buddy.Domains.FlashCard.Service.OpenAI.DTOs;
+using PubMed.Study.Buddy.DTOs;
 
 namespace PubMed.Study.Buddy.Domains.FlashCard.Service.ChatGpt;
 
