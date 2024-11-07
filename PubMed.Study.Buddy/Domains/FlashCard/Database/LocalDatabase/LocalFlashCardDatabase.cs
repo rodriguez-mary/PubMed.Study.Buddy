@@ -15,11 +15,12 @@ internal class LocalFlashCardDatabase(IAppCache cache, IConfiguration config) : 
 
     private readonly string _cacheKey = "LocalFlashCardDatabase_FlashCards";
 
-    private Dictionary<string, List<Card>> _cardsByArticle;
+    private Dictionary<string, List<Card>> _cardsByArticle = new();
+    private bool _flashCardsLoaded = false;
 
     public List<Card> RetrieveCardsForArticle(string articleId)
     {
-        if (_cardsByArticle == null) LoadFlashCards();
+        if (!_flashCardsLoaded) LoadFlashCards();
 
         _cardsByArticle!.TryGetValue(articleId, out List<Card>? cards);
 
@@ -44,6 +45,8 @@ internal class LocalFlashCardDatabase(IAppCache cache, IConfiguration config) : 
 
                 _cardsByArticle[card.ArticleId].Add(card);
             }
+
+            _flashCardsLoaded = true;
 
             return Task.FromResult(cards);
         }

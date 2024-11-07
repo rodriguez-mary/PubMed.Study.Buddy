@@ -17,9 +17,9 @@ public class PubMedClientTests
     public void ConstructorSucceeds()
     {
         Assert.IsNotNull(new PubMedClient(NullLogger<PubMedClient>.Instance,
-            GivenIHaveAPubMedSearchServiceMock([]).Object,
+            GivenIHaveAPubMedSearchServiceMock(null, null).Object,
             GivenIHaveAnImpactScoringServiceMock().Object,
-            GivenIHaveAFlashCardServiceMock().Object));
+            GivenIHaveAFlashCardServiceMock(null).Object));
     }
 
     #region FindArticles
@@ -29,11 +29,11 @@ public class PubMedClientTests
     {
         var articlesToReturn = new List<Article> { new() { Id = "article_1" }, new() { Id = "article_2" } };
 
-        var searchServiceMock = GivenIHaveAPubMedSearchServiceMock(articlesToReturn);
+        var searchServiceMock = GivenIHaveAPubMedSearchServiceMock(articlesToReturn, null);
         var scoringServiceMock = GivenIHaveAnImpactScoringServiceMock();
 
         var client = new PubMedClient(NullLogger<PubMedClient>.Instance, searchServiceMock.Object,
-            scoringServiceMock.Object, GivenIHaveAFlashCardServiceMock().Object);
+            scoringServiceMock.Object, GivenIHaveAFlashCardServiceMock(null).Object);
 
         var result = await client.GetArticles([new ArticleFilter()]);
 
@@ -46,11 +46,11 @@ public class PubMedClientTests
     {
         var articlesToReturn = new List<Article> { new() { Id = "article_1" }, new() { Id = "article_2" } };
 
-        var searchServiceMock = GivenIHaveAPubMedSearchServiceMock(articlesToReturn);
+        var searchServiceMock = GivenIHaveAPubMedSearchServiceMock(articlesToReturn, null);
         var scoringServiceMock = GivenIHaveAnImpactScoringServiceMock();
 
         var client = new PubMedClient(NullLogger<PubMedClient>.Instance, searchServiceMock.Object,
-            scoringServiceMock.Object, GivenIHaveAFlashCardServiceMock().Object);
+            scoringServiceMock.Object, GivenIHaveAFlashCardServiceMock(null).Object);
 
         _ = await client.GetArticles([new ArticleFilter()]);
 
@@ -63,11 +63,11 @@ public class PubMedClientTests
     {
         var articlesToReturn = new List<Article> { new() { Id = "article_1" }, new() { Id = "article_1" } };
 
-        var searchServiceMock = GivenIHaveAPubMedSearchServiceMock(articlesToReturn);
+        var searchServiceMock = GivenIHaveAPubMedSearchServiceMock(articlesToReturn, null);
         var scoringServiceMock = GivenIHaveAnImpactScoringServiceMock();
 
         var client = new PubMedClient(NullLogger<PubMedClient>.Instance, searchServiceMock.Object,
-            scoringServiceMock.Object, GivenIHaveAFlashCardServiceMock().Object);
+            scoringServiceMock.Object, GivenIHaveAFlashCardServiceMock(null).Object);
 
         var result = await client.GetArticles([new ArticleFilter()]);
 
@@ -77,13 +77,69 @@ public class PubMedClientTests
 
     #endregion FindArticles
 
+    #region GetMeshTerms
+
+    [TestMethod]
+    public async Task GetMeshTerms_CallsGetMeshTerms()
+    {
+        const string key = "key";
+        var meshTermsToReturn = new Dictionary<string, MeshTerm>();
+        meshTermsToReturn.Add(key, new MeshTerm() { DescriptorId = "descriptor" });
+
+        var searchServiceMock = GivenIHaveAPubMedSearchServiceMock(null, meshTermsToReturn);
+
+        var client = new PubMedClient(NullLogger<PubMedClient>.Instance, searchServiceMock.Object,
+            GivenIHaveAnImpactScoringServiceMock().Object, GivenIHaveAFlashCardServiceMock(null).Object);
+
+        var result = await client.GetMeshTerms();
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual(1, result.Count);
+        Assert.IsTrue(result.ContainsKey(key));
+        Assert.AreEqual(result[key].DescriptorId, meshTermsToReturn[key].DescriptorId);
+    }
+
+    #endregion GetMeshTerms
+
+    #region GenerateFlashCards
+
+    [TestMethod]
+    public async Task GenerateFlashCards_CallsGetFlashCardSet()
+    {
+        var name1 = "name1";
+        var name2 = "name2";
+
+        var articleSets = new List<ArticleSet>
+        {
+            new ArticleSet{ Name = name1 },
+            new ArticleSet{ Name = name2 }
+        };
+
+        var client = new PubMedClient(NullLogger<PubMedClient>.Instance, GivenIHaveAPubMedSearchServiceMock(null, null).Object,
+            GivenIHaveAnImpactScoringServiceMock().Object, GivenIHaveAFlashCardServiceMock(null).Object);
+
+        var cardSets = await client.GenerateFlashCards(articleSets);
+
+        Assert.IsNotNull(cardSets);
+        Assert.AreEqual(2, cardSets.Count);
+
+        var titles = cardSets.Select(item => item.Title).ToList();
+
+        Assert.IsTrue(titles.Contains(name1));
+        Assert.IsTrue(titles.Contains(name2));
+    }
+
+    #endregion GenerateFlashCards
+
     #region steps
 
-    private static Mock<IPubMedSearchService> GivenIHaveAPubMedSearchServiceMock(List<Article> articlesToReturn)
+    private static Mock<IPubMedSearchService> GivenIHaveAPubMedSearchServiceMock(List<Article>? articlesToReturn, Dictionary<string, MeshTerm>? meshTerms)
     {
         var mock = new Mock<IPubMedSearchService>();
         mock.Setup(m => m.FindArticles(It.IsAny<ArticleFilter>()))
-            .ReturnsAsync(articlesToReturn);
+            .ReturnsAsync(articlesToReturn ?? new List<Article>());
+        mock.Setup(m => m.GetMeshTerms())
+            .ReturnsAsync(meshTerms ?? new Dictionary<string, MeshTerm>());
 
         return mock;
     }
@@ -98,9 +154,13 @@ public class PubMedClientTests
         return new Mock<IOutputService>();
     }
 
-    private static Mock<IFlashCardService> GivenIHaveAFlashCardServiceMock()
+    private static Mock<IFlashCardService> GivenIHaveAFlashCardServiceMock(List<Card>? cards)
     {
-        return new Mock<IFlashCardService>();
+        var mock = new Mock<IFlashCardService>();
+        mock.Setup(m => m.GetFlashCardSet(It.IsAny<ArticleSet>()))
+            .ReturnsAsync(cards ?? new List<Card>());
+
+        return mock;
     }
 
     private static Mock<IFlashCardDatabase> GivenIHaveAFlashCardDatabaseMock()

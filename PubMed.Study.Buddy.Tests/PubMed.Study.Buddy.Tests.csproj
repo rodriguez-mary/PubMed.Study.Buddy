@@ -10,9 +10,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Domains\FlashCard\**" />
-    <EmbeddedResource Remove="Domains\FlashCard\**" />
-    <None Remove="Domains\FlashCard\**" />
+    <Compile Remove="Domains\Client\Output\**" />
+    <EmbeddedResource Remove="Domains\Client\Output\**" />
+    <None Remove="Domains\Client\Output\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -29,7 +29,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Domains\Client\Output\" />
+    <Folder Include="Domains\FlashCard\Database\" />
+    <Folder Include="Domains\FlashCard\Export\AnkiExport\" />
+    <Folder Include="Domains\FlashCard\Service\" />
   </ItemGroup>
 
 </Project>

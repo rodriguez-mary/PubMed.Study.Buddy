@@ -65,6 +65,7 @@ internal static class Utilities
     /// </summary>
     private static string TreeBranch(string treeNumber)
     {
+        if (treeNumber.Length < 1) return string.Empty;
         return treeNumber[..1];
     }
 }

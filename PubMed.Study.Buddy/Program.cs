@@ -1,5 +1,4 @@
-﻿using Aglomera;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
@@ -13,7 +12,6 @@ using PubMed.Study.Buddy.Domains.FlashCard.Export;
 using PubMed.Study.Buddy.Domains.FlashCard.Export.AnkiExport;
 using PubMed.Study.Buddy.Domains.FlashCard.Service;
 using PubMed.Study.Buddy.Domains.FlashCard.Service.ChatGpt;
-using PubMed.Study.Buddy.Domains.FlashCard.Service.FakeGpt;
 using PubMed.Study.Buddy.Domains.ImpactScoring;
 using PubMed.Study.Buddy.Domains.ImpactScoring.CitationNumber;
 using PubMed.Study.Buddy.Domains.Output;
